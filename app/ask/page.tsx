@@ -41,7 +41,14 @@ export default function AskQuestionPage() {
     response_language: "en",
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imageMetadata, setImageMetadata] = useState<{
+    uploadId: number
+    originalName: string
+    originalSize: number
+    originalLastModified: number
+  } | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isImageLoading, setIsImageLoading] = useState(false)
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null)
   const [isProcessingOCR, setIsProcessingOCR] = useState(false)
   const [ocrProgress, setOcrProgress] = useState(0)
@@ -49,6 +56,17 @@ export default function AskQuestionPage() {
   const [aiResponse, setAiResponse] = useState<string>("")
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showAIResponse, setShowAIResponse] = useState(false)
+  
+  // Voice recording states
+  const [isRecording, setIsRecording] = useState(false)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [transcriptionSource, setTranscriptionSource] = useState<string | null>(null)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -69,7 +87,53 @@ export default function AskQuestionPage() {
 
     // Fetch supported languages
     fetchSupportedLanguages()
+
+    // Debug: Check if file input exists
+    setTimeout(() => {
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement
+      if (fileInput) {
+        console.log("File input found:", fileInput)
+        console.log("File input type:", fileInput.type)
+        console.log("File input accept:", fileInput.accept)
+        console.log("File input display style:", fileInput.style.display)
+        console.log("File input className:", fileInput.className)
+      } else {
+        console.log("File input not found")
+      }
+    }, 1000)
   }, [router])
+
+  // Monitor image changes for debugging
+  useEffect(() => {
+    if (selectedImage) {
+      console.log("Selected image changed to:", selectedImage.name, selectedImage.size, selectedImage.lastModified)
+      console.log("Image is File instance:", selectedImage instanceof File)
+      console.log("Image type:", selectedImage.type)
+    } else {
+      console.log("Selected image cleared")
+    }
+  }, [selectedImage])
+
+  // Monitor OCR result changes for debugging
+  useEffect(() => {
+    if (ocrResult) {
+      console.log("OCR result updated:", ocrResult.text.substring(0, 100) + "...")
+    } else {
+      console.log("OCR result cleared")
+    }
+  }, [ocrResult])
+
+  // Cleanup recording intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingInterval) {
+        clearInterval(recordingInterval)
+      }
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop()
+      }
+    }
+  }, [recordingInterval, mediaRecorder, isRecording])
 
 
 
@@ -86,26 +150,83 @@ export default function AskQuestionPage() {
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("File upload triggered", event.target.files)
     const file = event.target.files?.[0]
     if (file) {
+      console.log("File selected:", file.name, file.size, file.type, "Last modified:", file.lastModified)
+      
+      // Reset all OCR-related state first
+      setOcrResult(null)
+      setOcrProgress(0)
+      setIsProcessingOCR(false)
+      setImageMetadata(null) // Clear previous metadata
+      
+      // Clear the question text when uploading a new image
+      setFormData(prev => ({ 
+        ...prev, 
+        question_type: "image",
+        question_text: "" // Clear previous text
+      }))
+      
+      // Store the original file and metadata separately
       setSelectedImage(file)
-      setFormData({ ...formData, question_type: "image" })
+      setIsImageLoading(true)
+      
+      // Store metadata separately to avoid breaking the File object
+      setImageMetadata({
+        uploadId: Date.now() + Math.random(),
+        originalName: file.name,
+        originalSize: file.size,
+        originalLastModified: file.lastModified
+      })
 
       // Create preview
       const reader = new FileReader()
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string)
+        setIsImageLoading(false)
+      }
+      reader.onerror = () => {
+        setIsImageLoading(false)
+        toast.error("Failed to load image preview")
       }
       reader.readAsDataURL(file)
 
-      // Reset OCR result
-      setOcrResult(null)
+      console.log("Image state reset complete for new image:", file.name, "Upload ID:", Date.now() + Math.random())
+    } else {
+      console.log("No file selected")
     }
   }
 
   const handleProcessOCR = async () => {
-    if (!selectedImage) return
+    if (!selectedImage) {
+      toast.error("No image selected for OCR processing")
+      return
+    }
 
+    // Validate that selectedImage is a proper File object
+    if (!(selectedImage instanceof File)) {
+      toast.error("Invalid image file. Please upload a new image.")
+      return
+    }
+
+    // Check if image is still loading
+    if (isImageLoading) {
+      toast.error("Please wait for the image to finish loading")
+      return
+    }
+
+    // Check if image preview is ready
+    if (!imagePreview) {
+      toast.error("Image preview not ready. Please try again.")
+      return
+    }
+
+    console.log("Starting OCR processing for image:", selectedImage.name, selectedImage.size)
+    if (imageMetadata) {
+      console.log("Processing image with upload ID:", imageMetadata.uploadId)
+    }
+    
     setIsProcessingOCR(true)
     setOcrProgress(0)
 
@@ -121,19 +242,30 @@ export default function AskQuestionPage() {
     }, 300)
 
     try {
-      const formData = new FormData()
-      formData.append("image", selectedImage)
-      formData.append("language", formData.language || "en")
-      formData.append("enhance", "true")
+      const ocrFormData = new FormData()
+      ocrFormData.append("image", selectedImage)
+      ocrFormData.append("language", formData.language || "en")
+      ocrFormData.append("enhance", "true")
+
+      console.log("Sending OCR request for image:", selectedImage.name)
+      console.log("FormData contents:")
+      for (let [key, value] of ocrFormData.entries()) {
+        console.log(`${key}:`, value)
+      }
 
       const response = await fetch("/api/ocr/extract", {
         method: "POST",
-        body: formData,
+        body: ocrFormData,
       })
 
       const result = await response.json()
 
       if (result.success) {
+        console.log("OCR result received:", result.data.text.substring(0, 100) + "...")
+        
+        // Always show success message
+        toast.success("Text extracted successfully!")
+        
         setOcrResult(result.data)
         setFormData((prev) => ({
           ...prev,
@@ -141,8 +273,8 @@ export default function AskQuestionPage() {
           language: result.data.detectedLanguage || prev.language,
         }))
         setOcrProgress(100)
-        toast.success("Text extracted successfully!")
       } else {
+        console.error("OCR API error:", result.error)
         toast.error(result.error || "Failed to extract text")
       }
     } catch (error) {
@@ -156,10 +288,31 @@ export default function AskQuestionPage() {
   }
 
   const handleRemoveImage = () => {
+    console.log("Removing image and resetting all states")
     setSelectedImage(null)
+    setImageMetadata(null)
     setImagePreview(null)
+    setIsImageLoading(false)
     setOcrResult(null)
-    setFormData({ ...formData, question_type: "text", question_text: "" })
+    setOcrProgress(0)
+    setIsProcessingOCR(false)
+    setFormData(prev => ({ 
+      ...prev, 
+      question_type: "text", 
+      question_text: "" 
+    }))
+  }
+
+  const forceRefreshOCR = () => {
+    if (selectedImage) {
+      console.log("Force refreshing OCR for current image:", selectedImage.name)
+      setOcrResult(null)
+      setOcrProgress(0)
+      setIsProcessingOCR(false)
+      setFormData(prev => ({ ...prev, question_text: "" }))
+      // Process OCR again
+      handleProcessOCR()
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -224,6 +377,137 @@ export default function AskQuestionPage() {
     }
   }
 
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      
+      const chunks: Blob[] = []
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data)
+        }
+      }
+      
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' })
+        setAudioBlob(blob)
+        const url = URL.createObjectURL(blob)
+        setAudioUrl(url)
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop())
+      }
+      
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+      setRecordingTime(0)
+      
+      // Start timer
+      const interval = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+      setRecordingInterval(interval)
+      
+      toast.success("Recording started! Click 'Stop Recording' when done.")
+    } catch (error) {
+      console.error("Error starting recording:", error)
+      toast.error("Failed to start recording. Please check microphone permissions.")
+    }
+  }
+  
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop()
+      setIsRecording(false)
+      
+      // Clear timer
+      if (recordingInterval) {
+        clearInterval(recordingInterval)
+        setRecordingInterval(null)
+      }
+      
+      toast.success("Recording stopped! Audio ready for transcription.")
+    }
+  }
+  
+  const clearRecording = () => {
+    setAudioBlob(null)
+    setAudioUrl(null)
+    setRecordingTime(0)
+    setIsRecording(false)
+    setTranscriptionSource(null)
+    
+    if (recordingInterval) {
+      clearInterval(recordingInterval)
+      setRecordingInterval(null)
+    }
+    
+    if (mediaRecorder) {
+      mediaRecorder.stop()
+      setMediaRecorder(null)
+    }
+  }
+  
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+  
+  const transcribeAudio = async () => {
+    if (!audioBlob) {
+      toast.error("No audio to transcribe")
+      return
+    }
+    
+    try {
+      setIsTranscribing(true)
+      toast.info("Transcribing your audio...")
+      
+      // Create FormData to send audio file
+      const formDataToSend = new FormData()
+      formDataToSend.append('audio', audioBlob, 'recording.wav')
+      formDataToSend.append('language', formData.language)
+      
+      // Send to transcription API
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formDataToSend
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update the question text with transcribed content
+        setFormData(prev => ({ 
+          ...prev, 
+          question_text: result.data.text
+        }))
+        
+        // Store transcription source for UI display
+        setTranscriptionSource(result.data.source)
+        
+        const sourceMessage = result.data.source === 'gemini-ai' ? ' using Gemini AI' : ''
+        toast.success(`Audio transcribed successfully${sourceMessage}! (${result.data.words} words, ${Math.round(result.data.confidence * 100)}% confidence)`)
+        
+        // Don't clear recording yet - let user see the transcribed text
+        // User can manually clear when ready
+      } else {
+        toast.error(result.error || "Failed to transcribe audio")
+      }
+      
+    } catch (error) {
+      console.error("Error transcribing audio:", error)
+      toast.error("Failed to transcribe audio. Please try again.")
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
   if (!user) return null
 
   return (
@@ -254,6 +538,11 @@ export default function AskQuestionPage() {
               Ask any question by typing, uploading an image, or recording audio. Our AI tutor supports multiple
               languages.
             </CardDescription>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>📸 To upload an image:</strong> First click the "Image/Photo" button above, then use the "Choose File" button or the file input below.
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -339,6 +628,12 @@ export default function AskQuestionPage() {
                     Voice
                   </Button>
                 </div>
+                {formData.question_type === "image" && (
+                  <p className="text-sm text-blue-600 mt-2 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Image upload enabled - Click "Choose File" below to select an image
+                  </p>
+                )}
               </div>
 
               {/* Image Upload Section */}
@@ -358,19 +653,38 @@ export default function AskQuestionPage() {
                             Take a photo of handwritten notes, textbook pages, or math problems
                           </p>
                           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                            <label htmlFor="image-upload">
-                              <Button type="button" variant="outline" className="cursor-pointer bg-transparent">
+                            <label htmlFor="image-upload" className="cursor-pointer">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="cursor-pointer bg-transparent"
+                                onClick={() => {
+                                  const fileInput = document.getElementById('image-upload') as HTMLInputElement
+                                  if (fileInput) {
+                                    console.log("Button clicked, triggering file input")
+                                    fileInput.click()
+                                  } else {
+                                    console.log("File input not found")
+                                  }
+                                }}
+                              >
                                 <Upload className="h-4 w-4 mr-2" />
                                 Choose File
                               </Button>
-                              <input
-                                id="image-upload"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                                className="hidden"
-                              />
                             </label>
+                            <input
+                              id="image-upload"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
+                              style={{ 
+                                position: 'absolute',
+                                left: '-9999px',
+                                opacity: 0,
+                                pointerEvents: 'none'
+                              }}
+                            />
                           </div>
                           <p className="text-xs text-gray-500 mt-2">Supports JPG, PNG, WebP (max 10MB)</p>
                         </div>
@@ -381,7 +695,7 @@ export default function AskQuestionPage() {
                       {/* Image Preview */}
                       <div className="relative border rounded-lg overflow-hidden">
                         <img
-                          src={imagePreview || ""}
+                          src={imagePreview || undefined}
                           alt="Question preview"
                           className="w-full max-h-96 object-contain bg-gray-50"
                         />
@@ -399,16 +713,29 @@ export default function AskQuestionPage() {
                       {/* OCR Processing */}
                       {!ocrResult && (
                         <div className="space-y-3">
+                          <div className="text-sm text-gray-600 mb-2">
+                            {selectedImage && imageMetadata && (
+                              <span>
+                                {isImageLoading ? "Loading..." : "Ready:"} {imageMetadata.originalName} 
+                                {imageMetadata && ` (ID: ${imageMetadata.uploadId})`}
+                              </span>
+                            )}
+                          </div>
                           <Button
                             type="button"
                             onClick={handleProcessOCR}
-                            disabled={isProcessingOCR}
+                            disabled={isProcessingOCR || isImageLoading}
                             className="w-full"
                           >
                             {isProcessingOCR ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 Extracting Text...
+                              </>
+                            ) : isImageLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Loading Image...
                               </>
                             ) : (
                               <>
@@ -430,13 +757,54 @@ export default function AskQuestionPage() {
                       {/* OCR Results */}
                       {ocrResult && (
                         <div className="space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                            <span className="font-medium text-green-800">Text Extracted Successfully</span>
-                            <Badge variant="secondary">{Math.round(ocrResult.confidence * 100)}% confidence</Badge>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                              <span className="font-medium text-green-800">
+                                {ocrResult.confidence >= 0.95 ? "Text Extracted (Gemini AI)" : "Text Extracted Successfully"}
+                              </span>
+                              <Badge variant={ocrResult.confidence >= 0.95 ? "default" : "secondary"}>
+                                {Math.round(ocrResult.confidence * 100)}% confidence
+                              </Badge>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={forceRefreshOCR}
+                              className="flex items-center space-x-2"
+                            >
+                              <Loader2 className="h-4 w-4" />
+                              Refresh OCR
+                            </Button>
                           </div>
+                          
+                          {/* Image info */}
+                          {selectedImage && imageMetadata && (
+                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                              <span>Image: {imageMetadata.originalName} | Size: {(imageMetadata.originalSize / 1024).toFixed(1)} KB</span>
+                            </div>
+                          )}
 
-                          {ocrResult.validation && !ocrResult.validation.isValid && (
+
+
+                                                      {/* Gemini AI Info Box */}
+                            {ocrResult && ocrResult.confidence >= 0.95 && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                                <div className="flex items-start space-x-2">
+                                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                                  <div>
+                                    <p className="text-sm font-medium text-green-800">Gemini AI Processing</p>
+                                    <p className="text-xs text-green-700 mt-1">
+                                      Your image is being processed using Google's Gemini AI for superior text extraction accuracy. 
+                                      This provides the highest quality results with advanced language understanding.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {ocrResult.validation && !ocrResult.validation.isValid && (
                             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                               <div className="flex items-start space-x-2">
                                 <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
@@ -486,18 +854,113 @@ export default function AskQuestionPage() {
                 />
               </div>
 
+
+
               {/* Voice Recording (if voice type selected) */}
               {formData.question_type === "voice" && (
                 <div className="space-y-2">
                   <Label>Voice Recording</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Mic className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">Record your question</p>
-                    <p className="text-sm text-gray-500 mb-4">Speak clearly in your preferred language</p>
-                    <Button type="button" variant="outline" className="bg-transparent">
-                      <Mic className="h-4 w-4 mr-2" />
-                      Start Recording
-                    </Button>
+                    {!isRecording && !audioUrl ? (
+                      <>
+                        <Mic className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-2">Record your question</p>
+                        <p className="text-sm text-gray-500 mb-4">Speak clearly in your preferred language</p>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="bg-transparent"
+                          onClick={startRecording}
+                        >
+                          <Mic className="h-4 w-4 mr-2" />
+                          Start Recording
+                        </Button>
+                      </>
+                    ) : isRecording ? (
+                      <>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-16 h-16 bg-red-500 rounded-full animate-pulse"></div>
+                          </div>
+                          <Mic className="h-12 w-12 text-red-500 mx-auto mb-4 relative z-10" />
+                        </div>
+                        <p className="text-red-600 mb-2 font-medium">Recording...</p>
+                        <p className="text-2xl font-mono text-red-600 mb-4">{formatTime(recordingTime)}</p>
+                        <Button 
+                          type="button" 
+                          variant="destructive"
+                          onClick={stopRecording}
+                        >
+                          <Mic className="h-4 w-4 mr-2" />
+                          Stop Recording
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-4">
+                          <audio controls className="w-full">
+                            <source src={audioUrl} type="audio/wav" />
+                            Your browser does not support the audio element.
+                          </audio>
+                          
+                          {/* Transcribed Text Preview */}
+                          {formData.question_text && formData.question_type === "voice" && (
+                            <div className={`${transcriptionSource === 'gemini-ai' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'} border rounded-lg p-3`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className={`text-sm font-medium ${transcriptionSource === 'gemini-ai' ? 'text-green-800' : 'text-blue-800'}`}>
+                                  Transcribed Text:
+                                </p>
+                                {transcriptionSource === 'gemini-ai' && (
+                                  <Badge variant="default" className="bg-green-600">
+                                    Gemini AI
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className={`text-sm ${transcriptionSource === 'gemini-ai' ? 'text-green-700' : 'text-blue-700'}`}>
+                                {formData.question_text}
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div className="flex space-x-2 justify-center">
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              onClick={startRecording}
+                            >
+                              <Mic className="h-4 w-4 mr-2" />
+                              Record Again
+                            </Button>
+                            <Button 
+                              type="button" 
+                              variant="default"
+                              onClick={transcribeAudio}
+                              disabled={isTranscribing}
+                            >
+                              {isTranscribing ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Transcribing...
+                                </>
+                              ) : (
+                                <>
+                                  <Brain className="h-4 w-4" />
+                                  Transcribe
+                                </>
+                              )}
+                            </Button>
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              onClick={clearRecording}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Clear
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

@@ -5,9 +5,18 @@ import type { OCRResult } from "@/lib/ocr-service"
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
+    
+    // Debug: Log all form data keys
+    console.log("[OCR API] Form data keys:", Array.from(formData.keys()))
+    
     const imageFile = formData.get("image") as File
     const language = (formData.get("language") as string) || "en"
     const enhanceImage = formData.get("enhance") === "true"
+
+    console.log("[OCR API] Image file received:", imageFile)
+    console.log("[OCR API] Image file type:", imageFile?.type)
+    console.log("[OCR API] Image file size:", imageFile?.size)
+    console.log("[OCR API] Image file name:", imageFile?.name)
 
     if (!imageFile) {
       return NextResponse.json(
@@ -20,7 +29,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (!imageFile.type.startsWith("image/")) {
+    if (!imageFile.type || !imageFile.type.startsWith("image/")) {
+      console.log("[OCR API] Invalid file type:", imageFile.type)
       return NextResponse.json(
         {
           success: false,
@@ -31,7 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size (max 10MB)
-    if (imageFile.size > 10 * 1024 * 1024) {
+    if (!imageFile.size || imageFile.size > 10 * 1024 * 1024) {
+      console.log("[OCR API] Invalid file size:", imageFile.size)
       return NextResponse.json(
         {
           success: false,

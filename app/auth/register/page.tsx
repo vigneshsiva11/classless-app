@@ -20,7 +20,6 @@ export default function RegisterPage() {
     userType: "",
     preferredLanguage: "en",
     location: "",
-    educationLevel: "",
   })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -50,7 +49,6 @@ export default function RegisterPage() {
           user_type: formData.userType,
           preferred_language: formData.preferredLanguage,
           location: formData.location,
-          education_level: formData.educationLevel,
         }),
       })
 
@@ -167,26 +165,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {formData.userType === "student" && (
-              <div className="space-y-2">
-                <Label htmlFor="education">Education Level</Label>
-                <Select
-                  value={formData.educationLevel}
-                  onValueChange={(value) => setFormData({ ...formData, educationLevel: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="primary">Primary (1-5)</SelectItem>
-                    <SelectItem value="middle">Middle (6-8)</SelectItem>
-                    <SelectItem value="high_school">High School (9-12)</SelectItem>
-                    <SelectItem value="college">College</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
 
             <Button type="submit" className="w-full" disabled={isLoading || !formData.userType}>
               {isLoading ? "Creating Account..." : "Create Account"}

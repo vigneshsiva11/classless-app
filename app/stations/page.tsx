@@ -706,6 +706,7 @@ export default function LearningStationsPage() {
           computer: false,
           tablet: false,
           internet: false,
+          
           other: false
         },
         operatingHours: "",

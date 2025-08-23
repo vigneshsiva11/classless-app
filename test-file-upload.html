@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .debug {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Upload Test</h1>
+    <p>This page tests various file input methods to help debug the upload issue.</p>
+
+    <div class="test-section">
+        <h3>1. Standard File Input</h3>
+        <input type="file" accept="image/*" id="standard-input" />
+        <p>This is a standard, visible file input.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Hidden File Input (like in the app)</h3>
+        <button onclick="document.getElementById('hidden-input').click()">Click to Open File Dialog</button>
+        <input type="file" accept="image/*" id="hidden-input" class="hidden" onchange="handleFileSelect(event)" />
+        <p>This simulates the hidden file input approach used in the app.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Programmatic File Input Creation</h3>
+        <button onclick="createTempFileInput()">Create Temporary File Input</button>
+        <p>This creates a temporary file input element and triggers it programmatically.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Label-based File Input</h3>
+        <label for="label-input" style="cursor: pointer;">
+            <button type="button">Click Label to Open File Dialog</button>
+        </label>
+        <input type="file" accept="image/*" id="label-input" class="hidden" onchange="handleFileSelect(event)" />
+        <p>This uses a label to trigger the hidden file input.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>Debug Information</h3>
+        <div id="debug-info" class="debug">
+            <p>File input status will appear here...</p>
+        </div>
+        <button onclick="checkFileInputs()">Check All File Inputs</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Selected File Info</h3>
+        <div id="file-info" class="debug">
+            <p>No file selected yet.</p>
+        </div>
+    </div>
+
+    <script>
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const fileInfo = document.getElementById('file-info');
+                fileInfo.innerHTML = `
+                    <p><strong>File selected:</strong> ${file.name}</p>
+                    <p><strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                    <p><strong>Type:</strong> ${file.type}</p>
+                    <p><strong>Last modified:</strong> ${new Date(file.lastModified).toLocaleString()}</p>
+                `;
+                console.log('File selected:', file);
+            }
+        }
+
+        function createTempFileInput() {
+            console.log('Creating temporary file input...');
+            const tempInput = document.createElement('input');
+            tempInput.type = 'file';
+            tempInput.accept = 'image/*';
+            tempInput.onchange = (e) => {
+                const target = e.target;
+                if (target.files && target.files[0]) {
+                    console.log('File selected via temp input:', target.files[0].name);
+                    handleFileSelect(e);
+                }
+            };
+            tempInput.click();
+        }
+
+        function checkFileInputs() {
+            const debugInfo = document.getElementById('debug-info');
+            const inputs = [
+                { id: 'standard-input', name: 'Standard Input' },
+                { id: 'hidden-input', name: 'Hidden Input' },
+                { id: 'label-input', name: 'Label Input' }
+            ];
+
+            let debugText = '';
+            inputs.forEach(input => {
+                const element = document.getElementById(input.id);
+                if (element) {
+                    debugText += `<p><strong>${input.name}:</strong> Found ✓</p>`;
+                    debugText += `<p>Type: ${element.type}</p>`;
+                    debugText += `<p>Accept: ${element.accept}</p>`;
+                    debugText += `<p>Display: ${element.style.display || 'default'}</p>`;
+                    debugText += `<p>Visibility: ${element.style.visibility || 'default'}</p>`;
+                    debugText += `<p>Opacity: ${element.style.opacity || 'default'}</p>`;
+                    debugText += `<p>Position: ${element.style.position || 'default'}</p>`;
+                    debugText += '<hr>';
+                } else {
+                    debugText += `<p><strong>${input.name}:</strong> Not found ✗</p>`;
+                }
+            });
+
+            debugInfo.innerHTML = debugText;
+        }
+
+        // Check file inputs on page load
+        window.onload = function() {
+            setTimeout(checkFileInputs, 1000);
+        };
+    </script>
+</body>
+</html>
