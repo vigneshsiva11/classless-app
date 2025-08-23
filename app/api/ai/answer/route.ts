@@ -1,0 +1,53 @@
+import { type NextRequest, NextResponse } from "next/server"
+import { aiService } from "@/lib/ai-service"
+import type { ApiResponse } from "@/lib/types"
+
+export async function POST(request: NextRequest) {
+  try {
+    const { question_text, language, response_language, question_type } = await request.json()
+
+    if (!question_text) {
+      return NextResponse.json<ApiResponse<null>>(
+        {
+          success: false,
+          error: "Missing question_text",
+        },
+        { status: 400 },
+      )
+    }
+
+    // Create a question object for AI processing
+    const question = {
+      id: 0, // Temporary ID
+      question_text,
+      language: language || "en",
+      response_language: response_language || "en",
+      question_type: question_type || "text",
+      user_id: 0, // Not needed for AI processing
+      created_at: new Date().toISOString(),
+      status: "pending",
+    }
+
+    // Process question with AI
+    const aiResponse = await aiService.processQuestion(question)
+
+    return NextResponse.json<ApiResponse<{ answer: string; confidence: number; language: string }>>({
+      success: true,
+      data: {
+        answer: aiResponse.answer,
+        confidence: aiResponse.confidence,
+        language: aiResponse.language,
+      },
+      message: "AI answer generated successfully",
+    })
+  } catch (error) {
+    console.error("Error generating AI answer:", error)
+    return NextResponse.json<ApiResponse<null>>(
+      {
+        success: false,
+        error: "Failed to generate AI answer",
+      },
+      { status: 500 },
+    )
+  }
+}
