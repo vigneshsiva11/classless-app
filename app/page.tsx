@@ -1,9 +1,26 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, MessageSquare, Phone, Users, Award, MapPin } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
+  const router = useRouter()
+
+  const handleStartLearning = () => {
+    try {
+      const userData = typeof window !== 'undefined' ? localStorage.getItem("classless_user") : null
+      if (userData) {
+        router.push("/dashboard")
+      } else {
+        router.push("/auth/login")
+      }
+    } catch {
+      router.push("/auth/login")
+    }
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -38,11 +55,9 @@ export default function HomePage() {
             community stations.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/ask">
-              <Button size="lg" className="w-full sm:w-auto">
-                Start Learning Now
-              </Button>
-            </Link>
+            <Button size="lg" className="w-full sm:w-auto" onClick={handleStartLearning}>
+              Start Learning Now
+            </Button>
             <Link href="/stations">
               <Button variant="outline" size="lg" className="w-full sm:w-auto bg-transparent">
                 Find Learning Station

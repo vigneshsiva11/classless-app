@@ -1,12 +1,13 @@
 // Database utility functions for Classless AI Tutor
 // Mock implementation for development - replace with actual DB connection
 
-import type { User, Question, Answer, Subject } from "./types"
+import type { User, Question, Answer, Subject, Reply } from "./types"
 
 // Mock data store (replace with actual database connection)
 const mockUsers: User[] = []
 const mockQuestions: Question[] = []
 const mockAnswers: Answer[] = []
+const mockReplies: Reply[] = []
 const mockSubjects: Subject[] = [
   {
     id: 1,
@@ -34,7 +35,7 @@ const mockSubjects: Subject[] = [
   },
 ]
 
-interface Scholarship {
+export interface Scholarship {
   id: string
   name: string
   provider: string
@@ -71,61 +72,144 @@ interface Notification {
 
 const mockScholarships: Scholarship[] = [
   {
-    id: "1",
-    name: "National Merit Scholarship",
-    provider: "Government of India",
-    amount: 50000,
-    category: "Merit",
-    description: "Merit-based scholarship for outstanding academic performance",
+    id: "nmmss",
+    name: "National Means-cum-Merit Scholarship (NMMSS)",
+    provider: "Ministry of Education, Government of India",
+    amount: 12000,
+    category: "Merit-cum-Means",
+    description: "Scholarship to prevent dropouts at Class VIII and encourage students to continue education at secondary stage (Class IX–XII).",
     eligibleStates: ["All"],
     minGrade: 9,
     maxGrade: 12,
-    deadline: "2024-06-30",
+    deadline: "2025-03-31",
     requirements: [
-      "Minimum 85% marks in previous grade",
-      "Family income below ₹8 lakhs per annum",
-      "Indian citizenship required",
-      "Regular attendance certificate",
+      "Family annual income generally ≤ ₹3.5 lakhs (as per latest notification)",
+      "Minimum qualifying marks as per state quota",
+      "Valid domicile and school bonafide certificate",
     ],
-    applicationUrl: "https://scholarships.gov.in",
+    applicationUrl: "https://scholarships.gov.in/",
   },
   {
-    id: "2",
-    name: "SC/ST Education Support",
-    provider: "Ministry of Social Justice",
-    amount: 30000,
-    category: "SC/ST",
-    description: "Financial assistance for SC/ST students",
+    id: "pm-sch-sc-post-matric",
+    name: "Post Matric Scholarships for SC Students",
+    provider: "Ministry of Social Justice & Empowerment, Government of India",
+    amount: 50000,
+    category: "SC",
+    description: "Centrally Sponsored Scheme providing financial assistance to Scheduled Caste students at post-matriculation levels (including Classes XI–XII).",
+    eligibleStates: ["All"],
+    minGrade: 11,
+    maxGrade: 12,
+    deadline: "2025-01-31",
+    requirements: [
+      "Valid SC certificate",
+      "Family income ceiling as per scheme guidelines",
+      "Bonafide certificate from institution",
+    ],
+    applicationUrl: "https://scholarships.gov.in/",
+  },
+  {
+    id: "pre-matric-minority",
+    name: "Pre-Matric Scholarship for Minorities",
+    provider: "Ministry of Minority Affairs, Government of India",
+    amount: 10000,
+    category: "Minority",
+    description: "Financial support to minority community students at pre-matric level (Classes I–X); commonly relevant for Classes VI–X.",
     eligibleStates: ["All"],
     minGrade: 6,
-    maxGrade: 12,
-    deadline: "2024-07-15",
+    maxGrade: 10,
+    deadline: "2025-09-30",
     requirements: [
-      "Valid SC/ST certificate",
-      "Family income below ₹2.5 lakhs per annum",
-      "School enrollment certificate",
-      "Bank account details",
+      "Belonging to notified minority community",
+      "Family income ceiling as per scheme",
+      "Minimum attendance criteria",
     ],
-    applicationUrl: "https://scholarships.gov.in",
+    applicationUrl: "https://scholarships.gov.in/",
   },
   {
-    id: "3",
-    name: "Girl Child Education Scheme",
-    provider: "State Government",
-    amount: 25000,
-    category: "Need",
-    description: "Promoting education among girl children",
-    eligibleStates: ["Maharashtra", "Karnataka", "Tamil Nadu"],
-    minGrade: 8,
+    id: "aicte-pragati",
+    name: "AICTE Pragati Scholarship for Girls",
+    provider: "AICTE, Government of India",
+    amount: 50000,
+    category: "Girls",
+    description: "Scholarship for girl students admitted to AICTE approved institutions in Diploma/Degree programs (post Class XII).",
+    eligibleStates: ["All"],
+    minGrade: 12,
     maxGrade: 12,
-    deadline: "2024-08-31",
+    deadline: "2025-10-31",
     requirements: [
-      "Female student",
-      "Minimum 75% attendance",
-      "Family income below ₹5 lakhs per annum",
-      "Continuation commitment letter",
+      "Admission to AICTE approved institution",
+      "One girl per family (two in case of twins)",
+      "As per AICTE eligibility criteria",
     ],
-    applicationUrl: "https://mahadbt.maharashtra.gov.in",
+    applicationUrl: "https://www.aicte-india.org/schemes/students-development-schemes",
+  },
+  {
+    id: "aicte-saksham",
+    name: "AICTE Saksham Scholarship (for differently-abled)",
+    provider: "AICTE, Government of India",
+    amount: 50000,
+    category: "PwD",
+    description: "Scholarship for specially-abled students pursuing technical education in AICTE approved institutions.",
+    eligibleStates: ["All"],
+    minGrade: 12,
+    maxGrade: 12,
+    deadline: "2025-10-31",
+    requirements: [
+      "Disability ≥ 40% (with valid certificate)",
+      "Admission to AICTE approved program",
+    ],
+    applicationUrl: "https://www.aicte-india.org/schemes/students-development-schemes",
+  },
+  {
+    id: "inspire-she",
+    name: "INSPIRE Scholarship (SHE)",
+    provider: "Department of Science & Technology (DST)",
+    amount: 80000,
+    category: "Merit",
+    description: "Scholarship for top performers who pursue B.Sc./B.S./Int. M.Sc./M.S. in Natural/Basic Sciences after Class XII.",
+    eligibleStates: ["All"],
+    minGrade: 12,
+    maxGrade: 12,
+    deadline: "2025-11-30",
+    requirements: [
+      "Top percentile in Class XII boards or competitive exams as per scheme",
+      "Enrollment in eligible science programs",
+    ],
+    applicationUrl: "https://www.online-inspire.gov.in/",
+  },
+  {
+    id: "pmsss-jk",
+    name: "Prime Minister's Special Scholarship Scheme (PMSSS) for J&K and Ladakh",
+    provider: "AICTE, Government of India",
+    amount: 120000,
+    category: "Need",
+    description: "Support for students from Jammu & Kashmir and Ladakh for pursuing higher education outside the UTs.",
+    eligibleStates: ["Jammu & Kashmir", "Ladakh"],
+    minGrade: 12,
+    maxGrade: 12,
+    deadline: "2025-07-31",
+    requirements: [
+      "Domicile of J&K or Ladakh",
+      "Admission under PMSSS guidelines",
+    ],
+    applicationUrl: "https://www.aicte-jk-scholarship-gov.in/",
+  },
+  {
+    id: "mahadbt-post-matric",
+    name: "MahaDBT Post Matric Scholarship",
+    provider: "Government of Maharashtra",
+    amount: 30000,
+    category: "State",
+    description: "Post-matric scholarships through the MahaDBT portal for eligible categories in Maharashtra.",
+    eligibleStates: ["Maharashtra"],
+    minGrade: 11,
+    maxGrade: 12,
+    deadline: "2025-02-28",
+    requirements: [
+      "State-specific eligibility and income criteria",
+      "Caste/Category certificate where applicable",
+    ],
+    applicationUrl: "https://mahadbt.maharashtra.gov.in/",
   },
 ]
 
@@ -168,6 +252,7 @@ export const mockDatabase = {
   users: mockUsers,
   questions: mockQuestions,
   answers: mockAnswers,
+  replies: mockReplies,
   subjects: mockSubjects,
   scholarships: mockScholarships,
   scholarshipApplications: mockScholarshipApplications,
@@ -235,6 +320,22 @@ export async function createAnswer(answerData: Omit<Answer, "id" | "created_at" 
   }
 
   return newAnswer
+}
+
+export async function getRepliesByQuestion(question_id: number): Promise<Reply[]> {
+  return mockReplies
+    .filter((r) => r.question_id === question_id)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+}
+
+export async function createReply(replyData: Omit<Reply, "id" | "created_at">): Promise<Reply> {
+  const newReply: Reply = {
+    ...replyData,
+    id: mockReplies.length + 1,
+    created_at: new Date().toISOString(),
+  }
+  mockReplies.push(newReply)
+  return newReply
 }
 
 export async function getAnswersByQuestion(question_id: number): Promise<Answer[]> {

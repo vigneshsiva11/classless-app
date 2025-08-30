@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
-import type { Question, Answer, User as UserType } from "@/lib/types"
+import type { Question, Answer, User as UserType, Reply } from "@/lib/types"
 
 interface QuestionWithAnswers extends Question {
   answers: Answer[]
@@ -35,6 +35,9 @@ export default function QuestionDetailPage() {
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [teacherAnswer, setTeacherAnswer] = useState("")
   const [isSubmittingTeacherAnswer, setIsSubmittingTeacherAnswer] = useState(false)
+  const [replies, setReplies] = useState<Reply[]>([])
+  const [newReply, setNewReply] = useState("")
+  const replyInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     // Check if user is logged in
@@ -58,6 +61,14 @@ export default function QuestionDetailPage() {
 
       if (result.success) {
         setQuestion(result.data)
+        // Fetch replies in parallel
+        try {
+          const r = await fetch(`/api/questions/${params.id}/replies`)
+          const rd = await r.json()
+          if (rd.success) setReplies(rd.data as Reply[])
+        } catch (e) {
+          console.error("Error fetching replies:", e)
+        }
       } else {
         toast.error("Question not found")
         router.push("/dashboard")
@@ -66,6 +77,35 @@ export default function QuestionDetailPage() {
       console.error("Error fetching question:", error)
       toast.error("Failed to load question")
     }
+  }
+
+  const handlePostReply = async () => {
+    if (!newReply.trim() || !user) return
+    try {
+      const res = await fetch(`/api/questions/${params.id}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, text: newReply.trim() })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setReplies((prev) => [...prev, data.data as Reply])
+        setNewReply("")
+        toast.success('Reply added')
+      } else {
+        toast.error(data.error || 'Failed to add reply')
+      }
+    } catch (e) {
+      console.error('Reply error:', e)
+      toast.error('Failed to add reply')
+    }
+  }
+
+  const focusReplyBox = () => {
+    try {
+      replyInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => replyInputRef.current?.focus(), 300)
+    } catch {}
   }
 
   const handleGetAIAnswer = async () => {
@@ -307,7 +347,10 @@ export default function QuestionDetailPage() {
                         Not Helpful
                       </Button>
                     </div>
-                    <span className="text-sm text-gray-500">{answer.helpful_votes} people found this helpful</span>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm text-gray-500">{answer.helpful_votes} people found this helpful</span>
+                      <Button size="sm" onClick={focusReplyBox}>Reply</Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -352,6 +395,49 @@ export default function QuestionDetailPage() {
             ))}
           </div>
         )}
+
+        {/* Replies Thread */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <MessageSquare className="h-5 w-5" />
+              <span>Discussion</span>
+            </CardTitle>
+            <CardDescription>Continue the conversation about this question</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {replies.length === 0 ? (
+                <p className="text-sm text-gray-600">No replies yet. Be the first to reply.</p>
+              ) : (
+                <div className="space-y-3">
+                  {replies.map((r) => (
+                    <div key={r.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <span>User #{r.user_id}</span>
+                        <span>{new Date(r.created_at).toLocaleString()}</span>
+                      </div>
+                      <p className="text-gray-800 whitespace-pre-wrap text-sm">{r.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Write a reply to continue the discussion..."
+                  value={newReply}
+                  onChange={(e) => setNewReply(e.target.value)}
+                  ref={replyInputRef}
+                  rows={3}
+                />
+                <div className="flex justify-end">
+                  <Button onClick={handlePostReply} disabled={!newReply.trim()}>Reply</Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Teacher Answer Form */}
         {user.user_type === "teacher" && (

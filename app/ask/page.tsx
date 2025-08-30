@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,7 +27,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
-import type { User } from "@/lib/types"
+import type { User, Reply } from "@/lib/types"
 import type { OCRResult } from "@/lib/ocr-service"
 
 export default function AskQuestionPage() {
@@ -53,9 +53,16 @@ export default function AskQuestionPage() {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false)
   const [ocrProgress, setOcrProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
-  const [aiResponse, setAiResponse] = useState<string>("")
+  const [aiResponses, setAiResponses] = useState<string[]>([])
   const [isLoadingAI, setIsLoadingAI] = useState(false)
   const [showAIResponse, setShowAIResponse] = useState(false)
+  const [savedQuestionId, setSavedQuestionId] = useState<number | null>(null)
+  const [showDiscussion, setShowDiscussion] = useState(false)
+  const [replies, setReplies] = useState<Reply[]>([])
+  const [newReply, setNewReply] = useState("")
+  const [isLoadingReplies, setIsLoadingReplies] = useState(false)
+  const replyBoxRef = useRef<HTMLTextAreaElement | null>(null)
+  const [followUpText, setFollowUpText] = useState("")
   
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false)
@@ -135,6 +142,11 @@ export default function AskQuestionPage() {
     }
   }, [recordingInterval, mediaRecorder, isRecording])
 
+  // Debug: Monitor form data changes
+  useEffect(() => {
+    console.log('[FormData] Current state:', formData)
+  }, [formData])
+
 
 
   const fetchSupportedLanguages = async () => {
@@ -195,6 +207,47 @@ export default function AskQuestionPage() {
       console.log("Image state reset complete for new image:", file.name, "Upload ID:", Date.now() + Math.random())
     } else {
       console.log("No file selected")
+    }
+  }
+
+  const handleFollowUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    const text = followUpText.trim()
+    if (!text) return
+
+    setIsLoading(true)
+    setIsLoadingAI(true)
+
+    try {
+      const aiResponseData = await fetch("/api/ai/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question_text: text,
+          language: formData.language,
+          response_language: formData.response_language,
+          question_type: "text",
+        }),
+      })
+
+      const aiResult = await aiResponseData.json()
+      if (aiResult.success) {
+        setAiResponses((prev) => [...prev, aiResult.data.answer])
+        setShowAIResponse(true)
+        setFollowUpText("")
+      } else {
+        toast.error(aiResult.error || "Failed to get AI response")
+      }
+    } catch (error) {
+      console.error("Error getting AI response:", error)
+      toast.error("Failed to get AI response. Please try again.")
+    } finally {
+      setIsLoading(false)
+      setIsLoadingAI(false)
     }
   }
 
@@ -355,10 +408,37 @@ export default function AskQuestionPage() {
       console.log("AI response result:", aiResult)
       
       if (aiResult.success) {
-        setAiResponse(aiResult.data.answer)
+        setAiResponses((prev) => [...prev, aiResult.data.answer])
         setShowAIResponse(true)
         toast.success("AI response generated successfully!")
         
+        // Save question to history for dashboard recent questions
+        try {
+          const stored = localStorage.getItem("classless_user")
+          const parsedUser = stored ? JSON.parse(stored) as User : null
+          if (parsedUser?.id) {
+            const saveRes = await fetch('/api/questions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: parsedUser.id,
+                subject_id: 1, // Default subject; adjust if subject selection is added
+                question_text: formData.question_text,
+                question_type: formData.question_type,
+                language: formData.language
+              })
+            })
+            const saveJson = await saveRes.json()
+            if (saveJson?.success && saveJson?.data?.id) {
+              setSavedQuestionId(saveJson.data.id)
+              setShowDiscussion(true)
+              await fetchReplies(saveJson.data.id)
+            }
+          }
+        } catch (saveErr) {
+          console.error('[Ask] Failed to save question history:', saveErr)
+        }
+
         // Clear the form for next question
         setFormData(prev => ({
           ...prev,
@@ -377,11 +457,47 @@ export default function AskQuestionPage() {
     }
   }
 
+  // Inline discussion helpers
+  const fetchReplies = async (questionId: number) => {
+    try {
+      setIsLoadingReplies(true)
+      const res = await fetch(`/api/questions/${questionId}/replies`)
+      const data = await res.json()
+      if (data.success) setReplies(data.data as Reply[])
+    } catch (e) {
+      console.error('Fetch replies error:', e)
+    } finally {
+      setIsLoadingReplies(false)
+    }
+  }
+
+  const postReply = async (questionId: number) => {
+    try {
+      if (!newReply.trim() || !user) return
+      const res = await fetch(`/api/questions/${questionId}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, text: newReply.trim() })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setReplies((prev) => [...prev, data.data as Reply])
+        setNewReply("")
+      }
+    } catch (e) {
+      console.error('Post reply error:', e)
+    }
+  }
+
   // Voice recording functions
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
+      // Prefer webm/opus when available for better compatibility
+      const preferredMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '')
+      const recorder = preferredMime ? new MediaRecorder(stream, { mimeType: preferredMime }) : new MediaRecorder(stream)
       
       const chunks: Blob[] = []
       
@@ -392,7 +508,8 @@ export default function AskQuestionPage() {
       }
       
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' })
+        const finalType = recorder.mimeType || 'audio/webm'
+        const blob = new Blob(chunks, { type: finalType })
         setAudioBlob(blob)
         const url = URL.createObjectURL(blob)
         setAudioUrl(url)
@@ -468,10 +585,14 @@ export default function AskQuestionPage() {
       setIsTranscribing(true)
       toast.info("Transcribing your audio...")
       
-      // Create FormData to send audio file
+      // Create FormData to send audio file with unique timestamp
       const formDataToSend = new FormData()
-      formDataToSend.append('audio', audioBlob, 'recording.wav')
+      const timestamp = Date.now()
+      const ext = audioBlob.type.includes('webm') ? 'webm' : (audioBlob.type.includes('ogg') ? 'ogg' : (audioBlob.type.includes('wav') ? 'wav' : 'webm'))
+      const uniqueFilename = `recording_${timestamp}.${ext}`
+      formDataToSend.append('audio', audioBlob, uniqueFilename)
       formDataToSend.append('language', formData.language)
+      formDataToSend.append('timestamp', timestamp.toString())
       
       // Send to transcription API
       const response = await fetch('/api/transcribe', {
@@ -482,11 +603,18 @@ export default function AskQuestionPage() {
       const result = await response.json()
       
       if (result.success) {
+        console.log('[Transcribe] Success response:', result.data)
+        console.log('[Transcribe] Transcribed text:', result.data.text)
+        
         // Update the question text with transcribed content
-        setFormData(prev => ({ 
-          ...prev, 
-          question_text: result.data.text
-        }))
+        setFormData(prev => {
+          const updated = { 
+            ...prev, 
+            question_text: result.data.text
+          }
+          console.log('[Transcribe] Updated form data:', updated)
+          return updated
+        })
         
         // Store transcription source for UI display
         setTranscriptionSource(result.data.source)
@@ -497,6 +625,7 @@ export default function AskQuestionPage() {
         // Don't clear recording yet - let user see the transcribed text
         // User can manually clear when ready
       } else {
+        console.error('[Transcribe] Failed response:', result)
         toast.error(result.error || "Failed to transcribe audio")
       }
       
@@ -845,13 +974,30 @@ export default function AskQuestionPage() {
                   placeholder={
                     formData.question_type === "image"
                       ? "Text will appear here after processing the image..."
+                      : formData.question_type === "voice"
+                      ? "Transcribed text will appear here after recording and transcribing..."
                       : "Type your question here... Be as specific as possible for better answers."
                   }
                   value={formData.question_text}
-                  onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
+                  onChange={(e) => {
+                    console.log('[TextArea] Value changed to:', e.target.value)
+                    setFormData({ ...formData, question_text: e.target.value })
+                  }}
                   rows={6}
                   required
+                  className={formData.question_type === "voice" && transcriptionSource ? "border-green-500 bg-green-50" : ""}
                 />
+                {formData.question_type === "voice" && transcriptionSource && (
+                  <div className="flex items-center space-x-2 text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Transcribed text loaded successfully</span>
+                    {transcriptionSource === 'gemini-ai' && (
+                      <Badge variant="default" className="bg-green-600 text-xs">
+                        Gemini AI
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
 
 
@@ -899,7 +1045,7 @@ export default function AskQuestionPage() {
                       <>
                         <div className="space-y-4">
                           <audio controls className="w-full">
-                            <source src={audioUrl} type="audio/wav" />
+                            <source src={audioUrl || undefined} type={audioBlob?.type || 'audio/webm'} />
                             Your browser does not support the audio element.
                           </audio>
                           
@@ -992,41 +1138,33 @@ export default function AskQuestionPage() {
           </CardContent>
         </Card>
 
-        {/* AI Response Display */}
-        {showAIResponse && (
+        {/* AI Response Display - supports multiple answers */}
+        {showAIResponse && aiResponses.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Brain className="h-5 w-5 text-blue-600" />
-                <span>AI Response</span>
+                <span>AI Responses</span>
               </CardTitle>
               <CardDescription>
-                Here's what our AI tutor has to say about your question
+                Follow-up questions will be answered below.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                  {aiResponse}
-                </div>
+              <div className="prose prose-sm max-w-none space-y-4 max-h-80 overflow-y-auto pr-2">
+                {aiResponses.map((resp, idx) => (
+                  <div key={idx} className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                    {resp}
+                  </div>
+                ))}
               </div>
-              <div className="mt-4 flex space-x-2">
+              <div className="mt-4 flex items-center justify-end">
                 <Button
                   variant="outline"
                   onClick={() => setShowAIResponse(false)}
                   size="sm"
                 >
-                  Hide Response
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowAIResponse(false)
-                    setFormData(prev => ({ ...prev, question_text: "" }))
-                  }}
-                  size="sm"
-                >
-                  Ask Another Question
+                  Hide Responses
                 </Button>
               </div>
             </CardContent>
@@ -1042,6 +1180,41 @@ export default function AskQuestionPage() {
                 <p className="text-gray-600">Getting AI response...</p>
                 <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Follow-up Question Box */}
+        {showAIResponse && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Ask a follow-up</CardTitle>
+              <CardDescription>Continue the conversation with the AI tutor</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleFollowUpSubmit} className="space-y-3">
+                <Textarea
+                  placeholder="Type your follow-up question..."
+                  value={followUpText}
+                  onChange={(e) => setFollowUpText(e.target.value)}
+                  rows={4}
+                />
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isLoading || !followUpText.trim()}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Asking...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Ask Follow-up
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         )}

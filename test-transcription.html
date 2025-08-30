@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcription Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .recording-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .record-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .stop-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        .transcribe-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .clear-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.recording {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status.ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.processing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .audio-player {
+            margin: 10px 0;
+        }
+        .transcription-result {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .file-info {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Transcription Test</h1>
+        <p>This page helps you test the improved transcription system. Record multiple audio clips to verify they get different transcriptions.</p>
+        
+        <div class="recording-controls">
+            <button id="recordBtn" class="record-btn">Start Recording</button>
+            <button id="stopBtn" class="stop-btn" disabled>Stop Recording</button>
+            <button id="transcribeBtn" class="transcribe-btn" disabled>Transcribe</button>
+            <button id="clearBtn" class="clear-btn">Clear</button>
+        </div>
+        
+        <div id="status" class="status">Ready to record</div>
+        
+        <div id="audioPlayer" class="audio-player" style="display: none;">
+            <audio id="audioElement" controls></audio>
+            <div id="fileInfo" class="file-info"></div>
+        </div>
+        
+        <div id="transcriptionResult" class="transcription-result" style="display: none;">
+            <h3>Transcription Result:</h3>
+            <p id="transcriptionText"></p>
+            <div id="transcriptionInfo" class="file-info"></div>
+        </div>
+        
+        <div id="history">
+            <h3>Recording History:</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioBlob;
+        let isRecording = false;
+        let recordingHistory = [];
+
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const transcribeBtn = document.getElementById('transcribeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioElement = document.getElementById('audioElement');
+        const fileInfo = document.getElementById('fileInfo');
+        const transcriptionResult = document.getElementById('transcriptionResult');
+        const transcriptionText = document.getElementById('transcriptionText');
+        const transcriptionInfo = document.getElementById('transcriptionInfo');
+        const historyList = document.getElementById('historyList');
+
+        recordBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        transcribeBtn.addEventListener('click', transcribeAudio);
+        clearBtn.addEventListener('click', clearRecording);
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                const chunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(chunks, { type: 'audio/wav' });
+                    const url = URL.createObjectURL(audioBlob);
+                    audioElement.src = url;
+                    audioPlayer.style.display = 'block';
+                    
+                    fileInfo.textContent = `File size: ${audioBlob.size} bytes, Duration: ${Math.floor(audioBlob.size / 1000)}s (estimated)`;
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    updateStatus('Recording ready for transcription', 'ready');
+                    transcribeBtn.disabled = false;
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                updateStatus('Recording...', 'recording');
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                transcribeBtn.disabled = true;
+                
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                updateStatus('Failed to start recording. Check microphone permissions.', 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                updateStatus('Recording stopped', 'ready');
+            }
+        }
+
+        async function transcribeAudio() {
+            if (!audioBlob) {
+                updateStatus('No audio to transcribe', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Transcribing audio...', 'processing');
+                transcribeBtn.disabled = true;
+
+                const formData = new FormData();
+                const timestamp = Date.now();
+                const uniqueFilename = `recording_${timestamp}.wav`;
+                formData.append('audio', audioBlob, uniqueFilename);
+                formData.append('language', 'en-US');
+                formData.append('timestamp', timestamp.toString());
+
+                const response = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    transcriptionText.textContent = result.data.text;
+                    transcriptionInfo.textContent = `Words: ${result.data.words}, Confidence: ${Math.round(result.data.confidence * 100)}%, Source: ${result.data.source || 'mock'}`;
+                    transcriptionResult.style.display = 'block';
+                    
+                    // Add to history
+                    const historyItem = {
+                        timestamp: new Date().toLocaleTimeString(),
+                        fileSize: audioBlob.size,
+                        transcription: result.data.text,
+                        confidence: result.data.confidence
+                    };
+                    recordingHistory.unshift(historyItem);
+                    updateHistory();
+                    
+                    updateStatus('Transcription completed successfully!', 'ready');
+                } else {
+                    updateStatus(`Transcription failed: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error transcribing audio:', error);
+                updateStatus('Failed to transcribe audio. Please try again.', 'error');
+            } finally {
+                transcribeBtn.disabled = false;
+            }
+        }
+
+        function clearRecording() {
+            audioBlob = null;
+            audioPlayer.style.display = 'none';
+            transcriptionResult.style.display = 'none';
+            updateStatus('Ready to record', 'ready');
+            transcribeBtn.disabled = true;
+        }
+
+        function updateStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function updateHistory() {
+            historyList.innerHTML = recordingHistory.map((item, index) => `
+                <div style="border: 1px solid #ddd; margin: 10px 0; padding: 10px; border-radius: 4px;">
+                    <strong>Recording ${index + 1}</strong> (${item.timestamp})<br>
+                    <small>File size: ${item.fileSize} bytes</small><br>
+                    <strong>Transcription:</strong> ${item.transcription}<br>
+                    <small>Confidence: ${Math.round(item.confidence * 100)}%</small>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

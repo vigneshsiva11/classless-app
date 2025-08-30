@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Transcription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .recording-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .record-btn { background-color: #dc3545; color: white; }
+        .stop-btn { background-color: #6c757d; color: white; }
+        .transcribe-btn { background-color: #007bff; color: white; }
+        .clear-btn { background-color: #28a745; color: white; }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.recording { background-color: #f8d7da; color: #721c24; }
+        .status.ready { background-color: #d4edda; color: #155724; }
+        .status.processing { background-color: #fff3cd; color: #856404; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .text-area {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+        }
+        .success { border-color: #28a745; background-color: #d4edda; }
+        .error { border-color: #dc3545; background-color: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Transcription</h1>
+        <p>This page helps debug the transcription functionality step by step.</p>
+        
+        <div class="section">
+            <h3>Step 1: Record Audio</h3>
+            <div class="recording-controls">
+                <button id="recordBtn" class="record-btn">Start Recording</button>
+                <button id="stopBtn" class="stop-btn" disabled>Stop Recording</button>
+                <button id="clearBtn" class="clear-btn">Clear</button>
+            </div>
+            <div id="status" class="status">Ready to record</div>
+            <div id="audioPlayer" style="display: none;">
+                <audio id="audioElement" controls></audio>
+                <div id="fileInfo"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Step 2: Transcribe Audio</h3>
+            <button id="transcribeBtn" class="transcribe-btn" disabled>Transcribe</button>
+            <div id="transcriptionResult" style="display: none;">
+                <h4>Transcription Result:</h4>
+                <textarea id="transcriptionText" class="text-area" readonly></textarea>
+                <div id="transcriptionInfo"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Step 3: Debug Information</h3>
+            <div id="debugInfo" class="debug-info">No debug information yet...</div>
+        </div>
+
+        <div class="section">
+            <h3>Step 4: Test Form Data Update</h3>
+            <label for="testTextarea">Test Textarea (simulates the main form):</label>
+            <textarea id="testTextarea" class="text-area" placeholder="This simulates the question text area in the main form..."></textarea>
+            <button id="updateTextBtn" class="transcribe-btn">Update Text (simulate transcription)</button>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioBlob;
+        let isRecording = false;
+        let debugLog = [];
+
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const transcribeBtn = document.getElementById('transcribeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioElement = document.getElementById('audioElement');
+        const fileInfo = document.getElementById('fileInfo');
+        const transcriptionResult = document.getElementById('transcriptionResult');
+        const transcriptionText = document.getElementById('transcriptionText');
+        const transcriptionInfo = document.getElementById('transcriptionInfo');
+        const debugInfo = document.getElementById('debugInfo');
+        const testTextarea = document.getElementById('testTextarea');
+        const updateTextBtn = document.getElementById('updateTextBtn');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.push(`[${timestamp}] ${message}`);
+            debugInfo.textContent = debugLog.join('\n');
+            console.log(message);
+        }
+
+        recordBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        transcribeBtn.addEventListener('click', transcribeAudio);
+        clearBtn.addEventListener('click', clearRecording);
+        updateTextBtn.addEventListener('click', updateTestText);
+
+        async function startRecording() {
+            try {
+                log('Starting recording...');
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                const chunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                        log(`Audio chunk received: ${event.data.size} bytes`);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(chunks, { type: 'audio/wav' });
+                    const url = URL.createObjectURL(audioBlob);
+                    audioElement.src = url;
+                    audioPlayer.style.display = 'block';
+                    
+                    fileInfo.textContent = `File size: ${audioBlob.size} bytes, Duration: ${Math.floor(audioBlob.size / 1000)}s (estimated)`;
+                    log(`Recording stopped. Blob size: ${audioBlob.size} bytes`);
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    updateStatus('Recording ready for transcription', 'ready');
+                    transcribeBtn.disabled = false;
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                updateStatus('Recording...', 'recording');
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                transcribeBtn.disabled = true;
+                
+            } catch (error) {
+                log(`Error starting recording: ${error.message}`);
+                updateStatus('Failed to start recording. Check microphone permissions.', 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                log('Stopping recording...');
+                mediaRecorder.stop();
+                isRecording = false;
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                updateStatus('Recording stopped', 'ready');
+            }
+        }
+
+        async function transcribeAudio() {
+            if (!audioBlob) {
+                updateStatus('No audio to transcribe', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Transcribing audio...', 'processing');
+                transcribeBtn.disabled = true;
+                log('Starting transcription...');
+
+                const formData = new FormData();
+                const timestamp = Date.now();
+                const uniqueFilename = `recording_${timestamp}.wav`;
+                formData.append('audio', audioBlob, uniqueFilename);
+                formData.append('language', 'en-US');
+                formData.append('timestamp', timestamp.toString());
+
+                log(`Sending request with filename: ${uniqueFilename}, timestamp: ${timestamp}`);
+
+                const response = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                log(`Response status: ${response.status}`);
+                log(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+
+                const result = await response.json();
+                log(`Response body: ${JSON.stringify(result, null, 2)}`);
+
+                if (result.success) {
+                    transcriptionText.value = result.data.text;
+                    transcriptionInfo.textContent = `Words: ${result.data.words}, Confidence: ${Math.round(result.data.confidence * 100)}%, Source: ${result.data.source || 'mock'}`;
+                    transcriptionResult.style.display = 'block';
+                    transcriptionText.classList.add('success');
+                    
+                    log(`Transcription successful: "${result.data.text}"`);
+                    updateStatus('Transcription completed successfully!', 'ready');
+                } else {
+                    log(`Transcription failed: ${result.error}`);
+                    updateStatus(`Transcription failed: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`Error transcribing audio: ${error.message}`);
+                updateStatus('Failed to transcribe audio. Please try again.', 'error');
+            } finally {
+                transcribeBtn.disabled = false;
+            }
+        }
+
+        function clearRecording() {
+            audioBlob = null;
+            audioPlayer.style.display = 'none';
+            transcriptionResult.style.display = 'none';
+            transcriptionText.classList.remove('success', 'error');
+            updateStatus('Ready to record', 'ready');
+            transcribeBtn.disabled = true;
+            log('Recording cleared');
+        }
+
+        function updateTestText() {
+            const transcribedText = transcriptionText.value;
+            if (transcribedText) {
+                testTextarea.value = transcribedText;
+                testTextarea.classList.add('success');
+                log(`Updated test textarea with: "${transcribedText}"`);
+            } else {
+                log('No transcription text available to copy');
+            }
+        }
+
+        function updateStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            log(`Status: ${message}`);
+        }
+
+        // Monitor textarea changes
+        testTextarea.addEventListener('input', (e) => {
+            log(`Test textarea value changed to: "${e.target.value}"`);
+        });
+
+        log('Debug page loaded successfully');
+    </script>
+</body>
+</html>

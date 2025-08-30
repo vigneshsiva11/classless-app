@@ -48,6 +48,14 @@ export interface Answer {
   teacher?: User
 }
 
+export interface Reply {
+  id: number
+  question_id: number
+  user_id: number
+  text: string
+  created_at: string
+}
+
 export interface LearningSession {
   id: number
   user_id: number

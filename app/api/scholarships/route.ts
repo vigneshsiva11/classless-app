@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mockDatabase } from "@/lib/database"
+import { fetchLiveScholarships } from "@/lib/scholarship-fetcher"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -8,7 +9,21 @@ export async function GET(request: NextRequest) {
   const grade = searchParams.get("grade")
 
   try {
-    let scholarships = mockDatabase.scholarships
+    // Try live fetch first if sources are configured
+    let scholarships = [] as typeof mockDatabase.scholarships
+    try {
+      const live = await fetchLiveScholarships({ state: state || undefined, category: category || undefined })
+      if (Array.isArray(live) && live.length > 0) {
+        // Narrow to Scholarship[] shape expected by consumers
+        scholarships = live
+      }
+    } catch (e) {
+      console.error("[Scholarships] Live fetch failed, falling back to mock:", e)
+    }
+
+    if (scholarships.length === 0) {
+      scholarships = mockDatabase.scholarships
+    }
 
     // Filter scholarships based on criteria
     if (category) {
