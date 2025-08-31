@@ -18,17 +18,26 @@ export class AIService {
   constructor() {
     // Check if we have the required API key
     const apiKey = process.env.GEMINI_API_KEY
+    console.log("[AI Service] API Key found:", apiKey ? "YES" : "NO")
+    console.log("[AI Service] API Key value:", apiKey ? apiKey.substring(0, 10) + "..." : "NOT FOUND")
+    
     this.isMockMode = !apiKey || apiKey === 'your-gemini-api-key-here'
     if (this.isMockMode) {
       console.warn("[AI Service] Running in mock mode - GEMINI_API_KEY not found or invalid")
     } else {
+      console.log("[AI Service] Initializing Gemini AI with API key...")
       this.genAI = new GoogleGenerativeAI(apiKey!)
+      console.log("[AI Service] Gemini AI initialized successfully!")
     }
   }
 
   async processQuestion(question: Question): Promise<AIResponse> {
+    console.log("[AI Service] Processing question:", question.question_text)
+    console.log("[AI Service] Mock mode:", this.isMockMode)
+    
     // If in mock mode, return mock responses
     if (this.isMockMode) {
+      console.log("[AI Service] Returning mock response due to mock mode")
       return this.getMockResponse(question)
     }
 
