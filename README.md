@@ -83,11 +83,32 @@ cd classless-app
 # Install dependencies
 npm install
 
-# Run backend
-npm run server
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local and add your API keys:
+# OPENAI_API_KEY=sk-your-openai-key-here
+# GEMINI_API_KEY=your-gemini-key-here
 
-# Run frontend
-npm start
+# Run the development server
+npm run dev
 ```
+
+## 🎤 Voice-to-Text Setup
+
+For accurate voice-to-text transcription, set up OpenAI Whisper API:
+
+1. **Get OpenAI API Key**: Visit [OpenAI Platform](https://platform.openai.com/) and create an API key
+2. **Configure Environment**: Add `OPENAI_API_KEY=sk-your-key-here` to your `.env.local` file
+3. **Test Transcription**: Visit `/test-openai-transcription.html` to test voice transcription
+
+See [OPENAI_SETUP.md](./OPENAI_SETUP.md) for detailed setup instructions.
+
+## 🧪 Testing Voice Transcription
+
+1. Open `http://localhost:3000/test-openai-transcription.html`
+2. Click "Start Recording" and speak your question
+3. Click "Stop Recording" when done
+4. Click "Transcribe" to convert speech to text
+5. The system will use OpenAI Whisper for accurate transcription
 
 ---

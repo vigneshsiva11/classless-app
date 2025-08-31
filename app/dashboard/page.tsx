@@ -68,10 +68,10 @@ export default function DashboardPage() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <BookOpen className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
-            </div>
+            </Link>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Welcome, {user.name}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>

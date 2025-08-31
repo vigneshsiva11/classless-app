@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createReply, getRepliesByQuestion } from "@/lib/database"
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const questionId = Number.parseInt(params.id)
+    const { id } = await params
+    const questionId = Number.parseInt(id)
     const replies = await getRepliesByQuestion(questionId)
     return NextResponse.json({ success: true, data: replies })
   } catch (e) {
@@ -11,9 +12,10 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const questionId = Number.parseInt(params.id)
+    const { id } = await params
+    const questionId = Number.parseInt(id)
     const body = await request.json()
     const { user_id, text } = body
     if (!user_id || !text) {

@@ -168,13 +168,13 @@ export default function KioskPage() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
               <BookOpen className="h-8 w-8 text-blue-600" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Classless Kiosk</h1>
                 <p className="text-sm text-gray-600">{station.name}</p>
               </div>
-            </div>
+            </Link>
 
             {currentUser && (
               <div className="flex items-center space-x-4">

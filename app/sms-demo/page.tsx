@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { MessageSquare, Phone, Send, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { getTollFreeNumber } from "@/lib/config"
 
 interface SMSMessage {
   from: "user" | "system"
@@ -223,7 +224,7 @@ export default function SMSDemoPage() {
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">How it works:</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Call +91-XXXXX-XXXXX</li>
+                  <li>• Call {getTollFreeNumber('voice')}</li>
                   <li>• Register with voice: "My name is John, English"</li>
                   <li>• Ask questions by speaking</li>
                   <li>• Get AI answers in your language</li>

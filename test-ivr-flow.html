@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IVR Flow Test - Classless AI Tutor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .endpoint {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 IVR Flow Test - Classless AI Tutor</h1>
+    
+    <div class="test-section">
+        <h2>📞 Current IVR Flow</h2>
+        <p>This test verifies that your IVR endpoints are working correctly and connecting users to AI.</p>
+        
+        <div class="endpoint">
+            <strong>1. Incoming Call:</strong> /api/ivr/incoming
+            <br><small>This should redirect to the welcome flow</small>
+        </div>
+        
+        <div class="endpoint">
+            <strong>2. Welcome:</strong> /api/ivr/welcome  
+            <br><small>Plays greeting and waits for user input</small>
+        </div>
+        
+        <div class="endpoint">
+            <strong>3. Voice Mode:</strong> /api/ivr/voice-mode
+            <br><small>Handles AI question processing</small>
+        </div>
+        
+        <div class="endpoint">
+            <strong>4. Continue:</strong> /api/ivr/voice-mode/continue
+            <br><small>Allows follow-up questions</small>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Test Endpoints</h2>
+        
+        <h3>Test 1: Incoming Call (Should Redirect)</h3>
+        <button onclick="testIncoming()">Test /api/ivr/incoming</button>
+        <div id="incoming-result" class="response" style="display: none;"></div>
+        
+        <h3>Test 2: Welcome Flow</h3>
+        <button onclick="testWelcome()">Test /api/ivr/welcome</button>
+        <div id="welcome-result" class="response" style="display: none;"></div>
+        
+        <h3>Test 3: Voice Mode (AI Processing)</h3>
+        <button onclick="testVoiceMode()">Test /api/ivr/voice-mode</button>
+        <div id="voice-result" class="response" style="display: none;"></div>
+        
+        <h3>Test 4: Continue Flow</h3>
+        <button onclick="testContinue()">Test /api/ivr/voice-mode/continue</button>
+        <div id="continue-result" class="response" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Exotel Configuration</h2>
+        <p><strong>Current Issue:</strong> Exotel is calling the wrong endpoint</p>
+        
+        <div class="endpoint">
+            <strong>❌ WRONG (Current):</strong> https://yourdomain.com/api/ivr/incoming
+        </div>
+        
+        <div class="endpoint">
+            <strong>✅ CORRECT:</strong> https://yourdomain.com/api/ivr/welcome
+        </div>
+        
+        <p><strong>Action Required:</strong> Update your Exotel dashboard to use the correct webhook URL.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>🚀 How to Fix</h2>
+        <ol>
+            <li><strong>Login to Exotel Dashboard</strong></li>
+            <li><strong>Go to Voice Configuration</strong></li>
+            <li><strong>Change Webhook URL from:</strong> <code>/api/ivr/incoming</code></li>
+            <li><strong>To:</strong> <code>/api/ivr/welcome</code></li>
+            <li><strong>Save and test</strong></li>
+        </ol>
+        
+        <p><strong>Alternative:</strong> The current setup should work because I've made the incoming route redirect to welcome, but it's better to fix the root cause.</p>
+    </div>
+
+    <script>
+        const baseUrl = window.location.origin;
+        
+        async function testEndpoint(endpoint, data = null, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': data ? 'application/json' : 'application/x-www-form-urlencoded'
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(`${baseUrl}${endpoint}`, options);
+                const result = await response.text();
+                
+                resultDiv.innerHTML = `✅ Success (${response.status})\n\n${result}`;
+                resultDiv.className = 'response';
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+                resultDiv.className = 'response';
+            }
+        }
+        
+        function testIncoming() {
+            const formData = new FormData();
+            formData.append('CallSid', 'test_call_123');
+            formData.append('From', '+91-9876543210');
+            
+            fetch(`${baseUrl}/api/ivr/incoming`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(result => {
+                const resultDiv = document.getElementById('incoming-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `✅ Success\n\n${result}`;
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('incoming-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            });
+        }
+        
+        function testWelcome() {
+            const formData = new FormData();
+            formData.append('Digits', '2'); // Voice mode
+            formData.append('CallSid', 'test_call_123');
+            formData.append('From', '+91-9876543210');
+            
+            fetch(`${baseUrl}/api/ivr/welcome`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(result => {
+                const resultDiv = document.getElementById('welcome-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `✅ Success\n\n${result}`;
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('welcome-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            });
+        }
+        
+        function testVoiceMode() {
+            const formData = new FormData();
+            formData.append('SpeechResult', 'What is photosynthesis?');
+            formData.append('Confidence', '0.9');
+            formData.append('CallSid', 'test_call_123');
+            formData.append('From', '+91-9876543210');
+            
+            fetch(`${baseUrl}/api/ivr/voice-mode`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(result => {
+                const resultDiv = document.getElementById('voice-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `✅ Success\n\n${result}`;
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('voice-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            });
+        }
+        
+        function testContinue() {
+            const formData = new FormData();
+            formData.append('Digits', '1'); // Continue
+            formData.append('CallSid', 'test_call_123');
+            formData.append('From', '+91-9876543210');
+            
+            fetch(`${baseUrl}/api/ivr/voice-mode/continue`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(result => {
+                const resultDiv = document.getElementById('continue-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `✅ Success\n\n${result}`;
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('continue-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            });
+        }
+    </script>
+</body>
+</html>

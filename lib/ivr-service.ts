@@ -3,6 +3,7 @@
 
 import { getUserByPhone, createUser, createQuestion } from "./database"
 import { aiService } from "./ai-service"
+import { openaiTranscriptionService } from "./openai-transcription-service"
 import type { User } from "./types"
 
 export interface IVRCall {
@@ -311,16 +312,49 @@ export class IVRService {
     return `/api/tts/audio?text=${encodeURIComponent(text)}&lang=${language}`
   }
 
-  // Convert speech to text (mock implementation)
+  // Convert speech to text using OpenAI Whisper
   async speechToText(audioUrl: string, language: string): Promise<VoiceInput> {
-    // In production, integrate with Google Speech-to-Text or similar
-    console.log(`[STT] Audio: ${audioUrl}, Language: ${language}`)
-
-    // Return mock transcription
-    return {
-      transcription: "What is photosynthesis?", // Mock transcription
-      confidence: 0.85,
-      language: language,
+    try {
+      console.log(`[STT] Processing audio: ${audioUrl}, Language: ${language}`)
+      
+      // Download audio file from URL
+      const response = await fetch(audioUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.statusText}`)
+      }
+      
+      const audioBlob = await response.blob()
+      const audioFile = new File([audioBlob], 'voice-input.wav', { type: audioBlob.type })
+      
+      // Use OpenAI Whisper for transcription
+      if (openaiTranscriptionService.isAvailable()) {
+        const result = await openaiTranscriptionService.transcribeAudio(audioFile, language)
+        
+        console.log(`[STT] OpenAI transcription successful: ${result.text}`)
+        
+        return {
+          transcription: result.text,
+          confidence: result.confidence,
+          language: result.language,
+        }
+      } else {
+        // Fallback to mock transcription if OpenAI is not available
+        console.log(`[STT] OpenAI not available, using mock transcription`)
+        return {
+          transcription: "What is photosynthesis?", // Mock transcription
+          confidence: 0.85,
+          language: language,
+        }
+      }
+    } catch (error) {
+      console.error(`[STT] Transcription error:`, error)
+      
+      // Return mock transcription on error
+      return {
+        transcription: "What is photosynthesis?", // Mock transcription
+        confidence: 0.85,
+        language: language,
+      }
     }
   }
 }

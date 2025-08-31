@@ -1426,7 +1426,11 @@ export default function LearningStationsPage() {
                 Back to Dashboard
               </Button>
             </Link>
-            <div className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <BookOpen className="h-6 w-6 text-blue-600" />
+              <h1 className="text-xl font-bold text-gray-900">Classless</h1>
+            </Link>
+            <div className="flex items-center space-x-2 ml-4">
               <MapPin className="h-6 w-6 text-orange-600" />
               <h1 className="text-xl font-bold text-gray-900">Learning Stations</h1>
             </div>

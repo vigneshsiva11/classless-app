@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, MessageSquare, Phone, Users, Award, MapPin } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getTollFreeNumber } from "@/lib/config"
 
 export default function HomePage() {
   const router = useRouter()
@@ -27,10 +28,10 @@ export default function HomePage() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <BookOpen className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
-            </div>
+            </Link>
             <nav className="flex space-x-4">
               <Link href="/dashboard">
                 <Button variant="outline">Dashboard</Button>
@@ -168,9 +169,9 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="flex items-center space-x-2 mb-4">
+              <div className="flex items-center justify-center space-x-2 mb-4">
                 <BookOpen className="h-6 w-6" />
                 <span className="text-xl font-bold">Classless</span>
               </div>
@@ -180,20 +181,12 @@ export default function HomePage() {
               <h5 className="font-semibold mb-4">Access Methods</h5>
               <ul className="space-y-2 text-gray-400">
                 <li>Web Application</li>
-                <li>SMS: Text to +91-XXXXX</li>
-                <li>Call: +91-XXXXX</li>
+                <li>SMS: Text to {getTollFreeNumber('sms')}</li>
+                <li>Call: {getTollFreeNumber('voice')}</li>
                 <li>Community Stations</li>
               </ul>
             </div>
-            <div>
-              <h5 className="font-semibold mb-4">Subjects</h5>
-              <ul className="space-y-2 text-gray-400">
-                <li>Mathematics</li>
-                <li>Science</li>
-                <li>English & Hindi</li>
-                <li>Social Studies</li>
-              </ul>
-            </div>
+
             <div>
               <h5 className="font-semibold mb-4">Support</h5>
               <ul className="space-y-2 text-gray-400">
