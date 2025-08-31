@@ -6,8 +6,8 @@ echo Installing openai package...
 pnpm add openai@^4.104.0
 
 echo.
-echo Installing all dependencies and updating lock file...
-pnpm install
+echo Updating lock file to fix ERR_PNPM_OUTDATED_LOCKFILE error...
+pnpm install --update-lockfile
 
 echo.
 echo Dependencies installed successfully!

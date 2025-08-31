@@ -3,7 +3,7 @@
 ## The Problem
 When deploying to Netlify, you get this error:
 ```
-Diagnosis: The build failed during the installation of dependencies with the error ERR_PNPM_OUTDATED_LOCKFILE. The error message indicates that the pnpm-lock.yaml file is not up to date with the package.json file, causing specifier mismatches.
+ERR_PNPM_OUTDATED_LOCKFILE: Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up to date with <ROOT>/package.json which indicates that the pnpm-lock.yaml file is not synchronized with the package.json file causing lockfile and package versions mismatch.
 ```
 
 ## Root Cause
@@ -22,12 +22,20 @@ The `pnpm-lock.yaml` file is out of sync with your `package.json`. Netlify uses 
 3. **Commit and push** the updated `package.json` and `pnpm-lock.yaml`
 4. **Redeploy** to Netlify
 
+### Netlify's Official Solution
+Netlify specifically recommends using:
+```bash
+pnpm install --update-lockfile
+```
+
+This command forces pnpm to regenerate the lock file and resolve version mismatches.
+
 ### Option 2: Manual Fix
 1. **Open terminal** in your project folder
 2. **Run these commands:**
    ```bash
    pnpm add openai@^4.104.0
-   pnpm install
+   pnpm install --update-lockfile
    ```
 3. **Commit and push** the changes
 4. **Redeploy** to Netlify
