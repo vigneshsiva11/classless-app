@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -45,11 +46,13 @@ export default function KioskPage() {
     }
 
     // Check if user is already logged in
-    const userData = localStorage.getItem("classless_user")
-    if (userData) {
-      const user = JSON.parse(userData)
-      setCurrentUser(user)
-      startSession()
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem("classless_user")
+      if (userData) {
+        const user = JSON.parse(userData)
+        setCurrentUser(user)
+        startSession()
+      }
     }
   }, [searchParams])
 
@@ -94,7 +97,9 @@ export default function KioskPage() {
 
         if (result.success && result.data) {
           setCurrentUser(result.data)
-          localStorage.setItem("classless_user", JSON.stringify(result.data))
+          if (typeof window !== 'undefined') {
+            localStorage.setItem("classless_user", JSON.stringify(result.data))
+          }
           startSession()
           toast.success(`Welcome back, ${result.data.name}!`)
         } else {
@@ -122,7 +127,9 @@ export default function KioskPage() {
 
         if (result.success) {
           setCurrentUser(result.data)
-          localStorage.setItem("classless_user", JSON.stringify(result.data))
+          if (typeof window !== 'undefined') {
+            localStorage.setItem("classless_user", JSON.stringify(result.data))
+          }
           startSession()
           toast.success(`Welcome to Classless, ${result.data.name}!`)
         } else {
@@ -140,7 +147,9 @@ export default function KioskPage() {
   const handleEndSession = () => {
     setCurrentUser(null)
     setSessionTime(0)
-    localStorage.removeItem("classless_user")
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("classless_user")
+    }
     toast.success("Session ended. Thank you for using Classless!")
   }
 
