@@ -146,6 +146,24 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
+          {user.user_type === "student" && (
+            <Link href="/rag">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-5 w-5 text-indigo-600" />
+                    <CardTitle className="text-lg">RAG Tutor</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Ask syllabus-based questions with context-aware answers
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
           {user.user_type === "teacher" && (
             <Link href="/teacher/pending">
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
