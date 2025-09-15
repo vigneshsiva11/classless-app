@@ -164,21 +164,23 @@ export default function DashboardPage() {
             </Link>
           )}
 
-          <Link href="/scholarships">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader className="pb-3">
-                <div className="flex items-center space-x-2">
-                  <Award className="h-5 w-5 text-purple-600" />
-                  <CardTitle className="text-lg">Scholarships</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Discover scholarships and government schemes
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
+          {user.user_type === "student" && (
+            <Link href="/scholarships">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Award className="h-5 w-5 text-purple-600" />
+                    <CardTitle className="text-lg">Scholarships</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Discover scholarships and government schemes
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           <Link href="/stations">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -196,23 +198,43 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/teacher/quiz-progress">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader className="pb-3">
-                <div className="flex items-center space-x-2">
-                  <Brain className="h-5 w-5 text-indigo-600" />
-                  <CardTitle className="text-lg">
-                    Student Quiz Progress
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  View and track student quiz performance and progress
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
+          {user.user_type === "teacher" && (
+            <Link href="/teacher/quiz-progress">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-5 w-5 text-indigo-600" />
+                    <CardTitle className="text-lg">
+                      Student Quiz Progress
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    View and track student quiz performance and progress
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {user.user_type === "student" && (
+            <Link href="/quiz/progress">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-5 w-5 text-indigo-600" />
+                    <CardTitle className="text-lg">My Quiz Progress</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    View your quiz performance and progress over time
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           <Link href="/career-guidance">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
