@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, GraduationCap, Building2 } from "lucide-react"
 import { getTollFreeNumber } from "@/lib/config"
-import { useLanguage } from "@/lib/utils"
+import { useLanguage } from "@/hooks/use-language"
 import { t } from "@/lib/i18n"
 
 export default function LoginPage() {
@@ -30,7 +30,7 @@ export default function LoginPage() {
                   <GraduationCap className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{t(lang,'navbar_ask','I\'m a Student')}</h3>
+                  <h3 className="font-semibold text-gray-900">Student</h3>
                   <p className="text-sm text-gray-600">{t(lang,'web_mobile_desc','Join as a student to learn with AI tutoring')}</p>
                 </div>
               </div>

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BookOpen, Phone, Hash, Lock, GraduationCap } from "lucide-react"
-import { setStoredLanguage, useLanguage } from "@/lib/utils"
+import { setStoredLanguage, useLanguage } from "@/hooks/use-language"
 import { t } from "@/lib/i18n"
 import { toast } from "sonner"
 

@@ -22,29 +22,6 @@ export function setStoredLanguage(lang: SupportedLanguage) {
   window.dispatchEvent(new CustomEvent('classless:language-changed', { detail: { lang } }))
 }
 
-// React hook to re-render on language changes
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import { useEffect, useState } from 'react'
-
-export function useLanguage(): SupportedLanguage {
-  const [lang, setLang] = useState<SupportedLanguage>(
-    typeof window !== 'undefined' ? getStoredLanguage() : 'en'
-  )
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      // @ts-ignore
-      const next = e?.detail?.lang as SupportedLanguage | undefined
-      setLang(next || getStoredLanguage())
-    }
-    window.addEventListener('classless:language-changed', handler)
-    return () => window.removeEventListener('classless:language-changed', handler)
-  }, [])
-
-  return lang
-}
-
 // Simple in-memory cache with TTL
 type CacheEntry<T> = { value: T; expiresAt: number }
 const memoryCache: Record<string, CacheEntry<unknown>> = {}

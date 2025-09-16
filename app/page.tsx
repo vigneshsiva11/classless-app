@@ -20,7 +20,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { getTollFreeNumber } from "@/lib/config";
 import { t } from "@/lib/i18n";
-import { useLanguage, setStoredLanguage } from "@/lib/utils";
+import { useLanguage, setStoredLanguage } from "@/hooks/use-language";
 
 export default function HomePage() {
   const router = useRouter();
@@ -59,12 +59,12 @@ export default function HomePage() {
               <Link href="/dashboard">
                 <Button variant="outline">{t(lang,'navbar_dashboard','Dashboard')}</Button>
               </Link>
-              <Link href="/ask">
+              <Link href="/auth/register/student">
                 <Button
                   variant={pathname === "/ask" ? "default" : "outline"}
                   className={pathname === "/ask" ? "bg-black text-white" : ""}
                 >
-                  {t(lang,'navbar_ask','Ask Question')}
+                  Ask Question
                 </Button>
               </Link>
               <Link href="/quiz">
