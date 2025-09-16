@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { aiService } from "@/lib/ai-service"
-import type { ApiResponse } from "@/lib/types"
+import type { ApiResponse, Question } from "@/lib/types"
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,12 +17,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a question object for AI processing
-    const question = {
+    const question: Question = {
       id: 0, // Temporary ID
       question_text,
       language: language || "en",
       response_language: response_language || "en",
-      question_type: question_type || "text",
+      question_type: (question_type as Question["question_type"]) || "text",
       user_id: 0, // Not needed for AI processing
       created_at: new Date().toISOString(),
       status: "pending",

@@ -20,6 +20,11 @@ export default function RegisterPage() {
     userType: "",
     preferredLanguage: "en",
     location: "",
+    rollNumber: "",
+    classStandard: "",
+    gender: "",
+    password: "",
+    teacherEmail: "",
   })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -49,6 +54,9 @@ export default function RegisterPage() {
           user_type: formData.userType,
           preferred_language: formData.preferredLanguage,
           location: formData.location,
+          education_level: formData.classStandard || undefined,
+          teacher_email: formData.teacherEmail || undefined,
+          password: formData.password || undefined,
         }),
       })
 
@@ -165,7 +173,100 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {formData.userType === "student" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="rollNumber">Student Roll Number</Label>
+                  <Input
+                    id="rollNumber"
+                    type="text"
+                    placeholder="Enter your roll number"
+                    value={formData.rollNumber}
+                    onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                    required
+                  />
+                </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="classStandard">Class Standard</Label>
+                  <Select
+                    value={formData.classStandard}
+                    onValueChange={(value) => setFormData({ ...formData, classStandard: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Class 6">Class 6</SelectItem>
+                      <SelectItem value="Class 7">Class 7</SelectItem>
+                      <SelectItem value="Class 8">Class 8</SelectItem>
+                      <SelectItem value="Class 9">Class 9</SelectItem>
+                      <SelectItem value="Class 10">Class 10</SelectItem>
+                      <SelectItem value="Class 11">Class 11</SelectItem>
+                      <SelectItem value="Class 12">Class 12</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {formData.userType === "teacher" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="teacherEmail">Teacher Email</Label>
+                  <Input
+                    id="teacherEmail"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={formData.teacherEmail}
+                    onChange={(e) => setFormData({ ...formData, teacherEmail: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password-teacher">Password</Label>
+                  <Input
+                    id="password-teacher"
+                    type="password"
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                </div>
+              </>
+            )}
 
             <Button type="submit" className="w-full" disabled={isLoading || !formData.userType}>
               {isLoading ? "Creating Account..." : "Create Account"}

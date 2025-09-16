@@ -19,10 +19,13 @@ import {
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { getTollFreeNumber } from "@/lib/config";
+import { t } from "@/lib/i18n";
+import { useLanguage, setStoredLanguage } from "@/lib/utils";
 
 export default function HomePage() {
   const router = useRouter();
   const pathname = usePathname();
+  const lang = useLanguage()
 
   const handleStartLearning = () => {
     try {
@@ -50,26 +53,39 @@ export default function HomePage() {
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
               <BookOpen className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t(lang,'app_name')}</h1>
             </Link>
-            <nav className="flex space-x-4">
+            <nav className="flex space-x-4 items-center">
               <Link href="/dashboard">
-                <Button variant="outline">Dashboard</Button>
+                <Button variant="outline">{t(lang,'navbar_dashboard','Dashboard')}</Button>
               </Link>
               <Link href="/ask">
                 <Button
                   variant={pathname === "/ask" ? "default" : "outline"}
                   className={pathname === "/ask" ? "bg-black text-white" : ""}
                 >
-                  Ask Question
+                  {t(lang,'navbar_ask','Ask Question')}
                 </Button>
               </Link>
               <Link href="/quiz">
-                <Button variant="outline">Quiz</Button>
+                <Button variant="outline">{t(lang,'navbar_quiz','Quiz')}</Button>
               </Link>
               <Link href="/career-guidance">
-                <Button variant="outline">Career Guidance</Button>
+                <Button variant="outline">{t(lang,'navbar_career','Career Guidance')}</Button>
               </Link>
+              <div className="relative">
+                <select
+                  aria-label="Language selector"
+                  className="border rounded px-3 py-2 text-sm"
+                  onChange={(e) => setStoredLanguage(e.target.value as any)}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('classless_lang') || 'en') : 'en'}
+                >
+                  <option value="pa">Punjabi</option>
+                  <option value="en">English</option>
+                  <option value="hi">Hindi</option>
+                  <option value="ta">Tamil</option>
+                </select>
+              </div>
             </nav>
           </div>
         </div>
@@ -79,12 +95,11 @@ export default function HomePage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Inclusive AI Tutor
-            <span className="block text-blue-600">for All Students</span>
+            {t(lang,'hero_title1')}
+            <span className="block text-blue-600">{t(lang,'hero_title2')}</span>
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Breaking barriers to education with multilingual AI tutoring
-            accessible via web, SMS, voice calls, and community stations.
+            {t(lang,'hero_desc')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -92,7 +107,7 @@ export default function HomePage() {
               className="w-full sm:w-auto"
               onClick={handleStartLearning}
             >
-              Start Learning Now
+              {t(lang,'start_learning_now')}
             </Button>
             <Link href="/stations">
               <Button
@@ -100,7 +115,7 @@ export default function HomePage() {
                 size="lg"
                 className="w-full sm:w-auto bg-transparent"
               >
-                Find Learning Station
+                {t(lang,'find_learning_station')}
               </Button>
             </Link>
           </div>
@@ -111,58 +126,46 @@ export default function HomePage() {
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
           <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Multiple Ways to Learn
+            {t(lang,'ways_title')}
           </h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="text-center">
               <CardHeader>
                 <BookOpen className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                <CardTitle>Web & Mobile</CardTitle>
+                <CardTitle>{t(lang,'web_mobile')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription>
-                  Full-featured app with AI tutoring, OCR for handwritten
-                  questions, and progress tracking.
-                </CardDescription>
+                <CardDescription>{t(lang,'web_mobile_desc')}</CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center">
               <CardHeader>
                 <MessageSquare className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <CardTitle>SMS Mode</CardTitle>
+                <CardTitle>{t(lang,'sms_mode')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription>
-                  Ask questions via text message from any phone. Perfect for
-                  feature phone users.
-                </CardDescription>
+                <CardDescription>{t(lang,'sms_mode_desc')}</CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center">
               <CardHeader>
                 <Phone className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <CardTitle>Voice Calls</CardTitle>
+                <CardTitle>{t(lang,'voice_calls')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription>
-                  Interactive voice response system for audio-based learning and
-                  questions.
-                </CardDescription>
+                <CardDescription>{t(lang,'voice_calls_desc')}</CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center">
               <CardHeader>
                 <MapPin className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                <CardTitle>Community Stations</CardTitle>
+                <CardTitle>{t(lang,'community_stations')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription>
-                  Physical learning stations in communities for collaborative
-                  learning.
-                </CardDescription>
+                <CardDescription>{t(lang,'community_stations_desc')}</CardDescription>
               </CardContent>
             </Card>
           </div>
@@ -173,7 +176,7 @@ export default function HomePage() {
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Powerful Features
+            {t(lang,'features_title')}
           </h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div className="flex items-start space-x-4">
@@ -181,13 +184,8 @@ export default function HomePage() {
                 <BookOpen className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  AI-Powered Tutoring
-                </h4>
-                <p className="text-gray-600">
-                  Advanced AI understands questions in multiple languages and
-                  provides personalized explanations.
-                </p>
+                <h4 className="font-semibold text-gray-900 mb-2">{t(lang,'feature_ai')}</h4>
+                <p className="text-gray-600">{t(lang,'feature_ai_desc')}</p>
               </div>
             </div>
 
@@ -196,13 +194,8 @@ export default function HomePage() {
                 <Users className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Teacher Network
-                </h4>
-                <p className="text-gray-600">
-                  Connect with qualified teachers for complex questions and
-                  personalized guidance.
-                </p>
+                <h4 className="font-semibold text-gray-900 mb-2">{t(lang,'feature_teachers')}</h4>
+                <p className="text-gray-600">{t(lang,'feature_teachers_desc')}</p>
               </div>
             </div>
 
@@ -211,13 +204,8 @@ export default function HomePage() {
                 <Award className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">
-                  Scholarship Alerts
-                </h4>
-                <p className="text-gray-600">
-                  Get notified about relevant scholarships and government
-                  schemes for education.
-                </p>
+                <h4 className="font-semibold text-gray-900 mb-2">{t(lang,'feature_scholar')}</h4>
+                <p className="text-gray-600">{t(lang,'feature_scholar_desc')}</p>
               </div>
             </div>
           </div>

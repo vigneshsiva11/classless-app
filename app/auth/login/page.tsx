@@ -1,88 +1,62 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { BookOpen, Phone } from "lucide-react"
-import { toast } from "sonner"
+import { BookOpen, GraduationCap, Building2 } from "lucide-react"
 import { getTollFreeNumber } from "@/lib/config"
+import { useLanguage } from "@/lib/utils"
+import { t } from "@/lib/i18n"
 
 export default function LoginPage() {
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      // Check if user exists
-      const response = await fetch(`/api/users?phone=${encodeURIComponent(phoneNumber)}`)
-      const result = await response.json()
-
-      if (result.success && result.data) {
-        // Store user info in localStorage (simple auth for hackathon)
-        localStorage.setItem("classless_user", JSON.stringify(result.data))
-        toast.success("Login successful!")
-        router.push("/dashboard")
-      } else {
-        toast.error("User not found. Please register first.")
-        router.push(`/auth/register?phone=${encodeURIComponent(phoneNumber)}`)
-      }
-    } catch (error) {
-      console.error("Login error:", error)
-      toast.error("Login failed. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  const lang = useLanguage()
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity">
             <BookOpen className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t(lang,'app_name')}</h1>
           </Link>
-          <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Enter your phone number to access your learning dashboard</CardDescription>
+          <CardTitle>{t(lang,'login_title','Welcome Back')}</CardTitle>
+          <CardDescription>{t(lang,'login_desc','Choose your role to get started with AI-powered learning')}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+91-9876543210"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+        <CardContent className="space-y-4">
+          {/* Student Option */}
+          <Link href="/auth/register/student" className="block">
+            <div className="border-2 border-blue-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <GraduationCap className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">{t(lang,'navbar_ask','I\'m a Student')}</h3>
+                  <p className="text-sm text-gray-600">{t(lang,'web_mobile_desc','Join as a student to learn with AI tutoring')}</p>
+                </div>
               </div>
             </div>
+          </Link>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing In..." : "Sign In"}
-            </Button>
-          </form>
+          {/* Teacher Option */}
+          <Link href="/auth/register/teacher" className="block">
+            <div className="border-2 border-green-200 rounded-lg p-4 hover:border-green-400 hover:bg-green-50 transition-all cursor-pointer">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Building2 className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">Teacher</h3>
+                  <p className="text-sm text-gray-600">{t(lang,'feature_teachers_desc','Join as a teacher to guide students')}</p>
+                </div>
+              </div>
+            </div>
+          </Link>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link href="/auth/register" className="text-blue-600 hover:underline">
-                Register here
+              {t(lang,'already_account','Don\'t have an account?')} {" "}
+              <Link href="/auth/signin" className="text-blue-600 hover:underline">
+                {t(lang,'sign_in','Sign In')}
               </Link>
             </p>
           </div>
@@ -91,7 +65,7 @@ export default function LoginPage() {
             <p className="text-xs text-gray-500 text-center">
               You can also access Classless via:
               <br />
-                              SMS: Text to {getTollFreeNumber('sms')} | Call: {getTollFreeNumber('voice')}
+              SMS: Text to {getTollFreeNumber('sms')} | Call: {getTollFreeNumber('voice')}
             </p>
           </div>
         </CardContent>

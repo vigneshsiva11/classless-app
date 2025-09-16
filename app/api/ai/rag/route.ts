@@ -11,27 +11,126 @@ interface DocChunk {
 }
 
 const corpus: DocChunk[] = [
+  // Class 6 Content
+  {
+    id: "science-6-basic-concepts-1",
+    text: "In Class 6 Science, we learn about basic concepts like living and non-living things, plants, animals, and simple machines. Plants make their own food through photosynthesis using sunlight, water, and carbon dioxide.",
+    metadata: { subject: "science", grade: 6, chapter: "Basic Concepts" },
+  },
+  {
+    id: "math-6-basic-operations-1",
+    text: "In Class 6 Math, we learn basic operations like addition, subtraction, multiplication, and division. We also study fractions, decimals, and basic geometry shapes like triangles, squares, and circles.",
+    metadata: { subject: "mathematics", grade: 6, chapter: "Basic Operations" },
+  },
+  {
+    id: "science-6-matter-1",
+    text: "In Class 6 Science, matter is anything that has mass and takes up space. There are three states of matter: solid, liquid, and gas. Water can exist in all three states.",
+    metadata: { subject: "science", grade: 6, chapter: "Matter" },
+  },
+  
+  // Class 8 Content
   {
     id: "science-8-motion-1",
-    text: "In Class 8 Science, Motion is the change in position of an object with time. Speed is distance traveled per unit time.",
+    text: "In Class 8 Science, Motion is the change in position of an object with time. Speed is distance traveled per unit time. Velocity includes both speed and direction. Acceleration is the rate of change of velocity.",
     metadata: { subject: "science", grade: 8, chapter: "Motion" },
   },
   {
     id: "math-8-fractions-1",
-    text: "In Class 8 Math, to add fractions, first make the denominators same, then add numerators.",
+    text: "In Class 8 Math, to add fractions, first make the denominators same, then add numerators. To multiply fractions, multiply numerators and denominators separately. Division of fractions is done by multiplying with the reciprocal.",
     metadata: { subject: "mathematics", grade: 8, chapter: "Fractions" },
+  },
+  {
+    id: "science-8-force-1",
+    text: "In Class 8 Science, Force is a push or pull that can change the state of motion of an object. Newton's first law states that an object at rest stays at rest unless acted upon by an external force.",
+    metadata: { subject: "science", grade: 8, chapter: "Force" },
+  },
+  
+  // Class 10 Content
+  {
+    id: "science-10-light-1",
+    text: "In Class 10 Science, Light is a form of energy that enables us to see objects. Light travels in straight lines. Reflection occurs when light bounces off a surface. The angle of incidence equals the angle of reflection.",
+    metadata: { subject: "science", grade: 10, chapter: "Light" },
+  },
+  {
+    id: "math-10-algebra-1",
+    text: "In Class 10 Math, we study quadratic equations, polynomials, and coordinate geometry. A quadratic equation has the form ax² + bx + c = 0, where a ≠ 0. The discriminant b² - 4ac determines the nature of roots.",
+    metadata: { subject: "mathematics", grade: 10, chapter: "Algebra" },
+  },
+  {
+    id: "science-10-electricity-1",
+    text: "In Class 10 Science, Electric current is the flow of electric charge. Ohm's law states that V = IR, where V is voltage, I is current, and R is resistance. Electric power is given by P = VI.",
+    metadata: { subject: "science", grade: 10, chapter: "Electricity" },
+  },
+  
+  // Class 12 Content
+  {
+    id: "physics-12-mechanics-1",
+    text: "In Class 12 Physics, we study advanced mechanics including rotational motion, gravitation, and oscillations. Angular momentum is conserved in the absence of external torque. Simple harmonic motion follows the equation x = A sin(ωt + φ).",
+    metadata: { subject: "physics", grade: 12, chapter: "Mechanics" },
+  },
+  {
+    id: "math-12-calculus-1",
+    text: "In Class 12 Math, we study calculus including limits, derivatives, and integrals. The derivative of x^n is nx^(n-1). The integral of x^n is (x^(n+1))/(n+1) + C, where C is the constant of integration.",
+    metadata: { subject: "mathematics", grade: 12, chapter: "Calculus" },
+  },
+  {
+    id: "chemistry-12-organic-1",
+    text: "In Class 12 Chemistry, we study organic chemistry including hydrocarbons, functional groups, and reactions. Alkanes have single bonds, alkenes have double bonds, and alkynes have triple bonds. IUPAC naming follows specific rules.",
+    metadata: { subject: "chemistry", grade: 12, chapter: "Organic Chemistry" },
   },
 ];
 
 let isEmbedded = false;
 
+// Lightweight detector/solver for basic arithmetic in natural language
+function tryBasicMath(question: string): string | null {
+  const q = question.toLowerCase().replace(/[^0-9+\-*/x÷,.\s]/g, " ");
+  // Normalize common words to operators
+  const normalized = q
+    .replace(/plus|add|sum of|\band\b/gi, "+")
+    .replace(/minus|subtract|difference|less/gi, "-")
+    .replace(/times|multiply|multiplied by|x|✕/gi, "*")
+    .replace(/divide|divided by|over|÷/gi, "/");
+
+  // Extract numbers (integers) and operator sequence
+  const numbers = normalized.match(/\d+(?:\.\d+)?/g)?.map(Number) || [];
+  const opMatch = normalized.match(/[+\-*/]/);
+
+  if (numbers.length >= 2 && opMatch) {
+    const a = numbers[0];
+    const b = numbers[1];
+    let result: number | null = null;
+    switch (opMatch[0]) {
+      case "+":
+        result = a + b; break;
+      case "-":
+        result = a - b; break;
+      case "*":
+        result = a * b; break;
+      case "/":
+        // Avoid division by zero
+        result = b === 0 ? NaN : a / b; break;
+    }
+    if (result !== null && !Number.isNaN(result)) {
+      return `${a} ${opMatch[0]} ${b} = ${result}`;
+    }
+  }
+  return null;
+}
+
 async function ensureEmbeddings(embeddingModel: any) {
   if (isEmbedded) return;
-  for (const c of corpus) {
-    const res = await embeddingModel.embedContent(c.text);
-    c.embedding = res.embedding.values as unknown as number[];
+  try {
+    for (const c of corpus) {
+      const res = await embeddingModel.embedContent(c.text);
+      c.embedding = res.embedding.values as unknown as number[];
+    }
+    isEmbedded = true;
+  } catch (error) {
+    console.error("[RAG] Error generating embeddings:", error);
+    // If embeddings fail, we'll use a simple text-based fallback
+    throw new Error("Failed to generate embeddings. Please check your GEMINI_API_KEY.");
   }
-  isEmbedded = true;
 }
 
 function cosineSimilarity(a: number[], b: number[]) {
@@ -78,6 +177,20 @@ export async function POST(request: NextRequest) {
     let retrieved = "";
     let ranked: Array<{ chunk: any; score: number }> = [];
 
+    // If the question is a basic arithmetic query and grade supports it (>= 6)
+    if (typeof grade === "number" && grade >= 6) {
+      const mathAnswer = tryBasicMath(question);
+      if (mathAnswer) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            answer: `Answer: ${mathAnswer}`,
+            context: [{ id: "math-basic-ops", score: 1 }],
+          },
+        });
+      }
+    }
+
     if (pcApiKey && pcIndexName) {
       try {
         const pc = new Pinecone({ apiKey: pcApiKey });
@@ -110,24 +223,65 @@ export async function POST(request: NextRequest) {
           .sort((a, b) => b.score - a.score)
           .slice(0, 4);
         retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
+        // If nothing matched after grade filtering, attempt keyword fallback
+        if (!retrieved) {
+          const questionLower2 = question.toLowerCase();
+          const matchingChunks2 = corpus.filter((c) => {
+            const textLower = c.text.toLowerCase();
+            const hasKeyword = questionLower2
+              .split(/\s+/)
+              .some((word: string) => word.length > 3 && textLower.includes(word));
+            const gradeMatch = !grade || c.metadata?.grade === grade;
+            return hasKeyword && gradeMatch;
+          });
+          if (matchingChunks2.length > 0) {
+            retrieved = matchingChunks2
+              .slice(0, 3)
+              .map((c) => c.text)
+              .join("\n\n");
+          }
+        }
       }
     } else {
-      // In-memory
-      await ensureEmbeddings(embeddingModel);
-      const q = await embeddingModel.embedContent(question);
-      const qEmbedding = q.embedding.values as unknown as number[];
-      ranked = corpus
-        .map((c) => ({
-          chunk: c,
-          score: cosineSimilarity(c.embedding!, qEmbedding),
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 4);
-      // Apply grade filter for in-memory corpus if provided
-      if (typeof grade === "number") {
-        ranked = ranked.filter((r) => r.chunk?.metadata?.grade === grade);
+      // In-memory with fallback for invalid API key
+      try {
+        await ensureEmbeddings(embeddingModel);
+        const q = await embeddingModel.embedContent(question);
+        const qEmbedding = q.embedding.values as unknown as number[];
+        ranked = corpus
+          .map((c) => ({
+            chunk: c,
+            score: cosineSimilarity(c.embedding!, qEmbedding),
+          }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 4);
+        // Apply grade filter for in-memory corpus if provided
+        if (typeof grade === "number") {
+          ranked = ranked.filter((r) => r.chunk?.metadata?.grade === grade);
+        }
+        retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
+      } catch (error) {
+        console.error("[RAG] Using text-based fallback due to API error:", error);
+        // Simple text-based matching as fallback
+        const questionLower = question.toLowerCase();
+        const keywordAllow = new Set([
+          "add", "plus", "sum", "subtract", "minus", "difference",
+          "multiply", "times", "product", "divide", "divided"
+        ]);
+        const matchingChunks = corpus.filter((c) => {
+          const textLower = c.text.toLowerCase();
+          const hasKeyword = questionLower.split(/\s+/).some((word: string) => {
+            const w = word.replace(/[^a-z]/g, "");
+            return (w.length >= 3 && textLower.includes(w)) || keywordAllow.has(w);
+          });
+          const gradeMatch = !grade || c.metadata?.grade === grade;
+          return hasKeyword && gradeMatch;
+        });
+        
+        if (matchingChunks.length > 0) {
+          retrieved = matchingChunks.slice(0, 3).map(c => c.text).join("\n\n");
+        }
       }
-      retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
     }
 
     // If no context retrieved, avoid calling the model and respond immediately
@@ -142,11 +296,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Prepare a simple extractive fallback in case model calls fail
+    const trimmedContext = retrieved.slice(0, 2000);
+    const defaultAnswer = (() => {
+      const sentences = trimmedContext
+        .replace(/\n+/g, " ")
+        .split(/(?<=[.!?])\s+/)
+        .slice(0, 2)
+        .join(" ");
+      return sentences || "I don't know because it is out of syllabus.";
+    })();
+
     // Build prompt (cap context to ~2k chars for speed)
-    const prompt = `You are an AI tutor for 8th standard students.\nUse only the following context to answer the question.\nIf the answer is not in the context, say "I don't know because it is out of syllabus."\nRespond concisely in language code: ${answerLang}.\n\nContext:\n${retrieved.slice(
-      0,
-      2000
-    )}\n\nQuestion (lang=${language || "en"}):\n${question}\n\nAnswer:`;
+    const gradeText = grade ? `Class ${grade}` : "the appropriate class level";
+    const prompt = `You are an AI tutor for ${gradeText} students.\nUse only the following context to answer the question.\nIf the answer is not in the context, say "I don't know because it is out of syllabus."\nRespond concisely in language code: ${answerLang}.\n\nContext:\n${trimmedContext}\n\nQuestion (lang=${language || "en"}):\n${question}\n\nAnswer:`;
 
     // Try fast model with small fallback and brief backoff to handle 503s
     const models = [
@@ -165,11 +328,14 @@ export async function POST(request: NextRequest) {
         if (answer && answer.trim()) break;
       } catch (e) {
         if (i === models.length - 1) {
+          // On persistent model failure (e.g., invalid API key), fall back to extractive answer
           return NextResponse.json({
             success: true,
             data: {
-              answer: "I don't know because it is out of syllabus.",
-              context: [],
+              answer: defaultAnswer,
+              context: ranked?.length
+                ? ranked.map((r) => ({ id: r.chunk.id, score: r.score }))
+                : undefined,
             },
           });
         }

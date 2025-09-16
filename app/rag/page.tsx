@@ -46,6 +46,29 @@ export default function RagTutorPage() {
   const [lang, setLang] = useState("en");
   const [respLang, setRespLang] = useState("en");
   const [grade, setGrade] = useState<string>("");
+  const suggested: Record<string, string[]> = {
+    "6": [
+      "What is photosynthesis?",
+      "What are the three states of matter?",
+      "How do you add fractions?",
+      "Add 23 and 8",
+    ],
+    "8": [
+      "What is motion?",
+      "What is force?",
+      "How do you multiply fractions?",
+    ],
+    "10": [
+      "What is light?",
+      "What is Ohm's law?",
+      "What is a quadratic equation?",
+    ],
+    "12": [
+      "What is angular momentum?",
+      "What is the derivative of x^n?",
+      "What are alkanes?",
+    ],
+  };
 
   useEffect(() => {
     try {
@@ -179,6 +202,24 @@ export default function RagTutorPage() {
                 rows={5}
               />
             </div>
+
+            {grade && suggested[grade] && (
+              <div className="mt-3">
+                <Label>Suggested for Class {grade}</Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {suggested[grade].map((q) => (
+                    <Button
+                      key={q}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setQuestion(q)}
+                    >
+                      {q}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end mt-4">
               <Button onClick={askRag} disabled={isLoading || !question.trim()}>

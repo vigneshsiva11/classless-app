@@ -55,16 +55,7 @@ This guide will help you set up the CLASS_LESS application with all its features
 
 ## Voice-to-Text Setup
 
-### Why OpenAI Whisper?
-
-OpenAI's Whisper API provides the most accurate speech-to-text transcription available, with support for:
-- 99+ languages
-- Automatic language detection
-- High accuracy even with background noise
-- Word-level timestamps
-- Real-time transcription capabilities
-
-### Getting OpenAI API Key
+###
 
 1. Go to [OpenAI Platform](https://platform.openai.com/)
 2. Sign up or log in to your account

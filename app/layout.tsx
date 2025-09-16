@@ -14,8 +14,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Language is applied via html lang attribute from localStorage on client
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <style>{`
 html {
@@ -24,6 +25,19 @@ html {
   --font-mono: ${GeistMono.variable};
 }
         `}</style>
+        <script dangerouslySetInnerHTML={{__html:`
+          (function(){
+            try{
+              var lang=localStorage.getItem('classless_lang')||'en';
+              document.documentElement.setAttribute('lang', lang);
+              window.addEventListener('classless:language-changed',function(e){
+                if(e && e.detail && e.detail.lang){
+                  document.documentElement.setAttribute('lang', e.detail.lang);
+                }
+              });
+            }catch(e){}
+          })();
+        `}} />
       </head>
       <body>{children}</body>
     </html>
