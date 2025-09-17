@@ -44,6 +44,19 @@ const en: Dict = {
   sign_in: 'Sign In',
   register_here: 'Register here',
   already_account: "Don't have an account?",
+  // Footer
+  footer_tagline: 'Making quality education accessible to everyone, everywhere.',
+  footer_access_methods: 'Access Methods',
+  footer_web_app: 'Web Application',
+  footer_sms_text: 'SMS: Text to',
+  footer_call_text: 'Call:',
+  footer_community_stations: 'Community Stations',
+  footer_support: 'Support',
+  footer_help_center: 'Help Center',
+  footer_contact_us: 'Contact Us',
+  footer_privacy_policy: 'Privacy Policy',
+  footer_terms_of_service: 'Terms of Service',
+  footer_copyright: 'Bridging the digital education divide.',
 }
 
 const pa: Dict = {
@@ -88,6 +101,19 @@ const pa: Dict = {
   sign_in: 'ਸਾਇਨ ਇਨ',
   register_here: 'ਇੱਥੇ ਰਜਿਸਟਰ ਕਰੋ',
   already_account: 'ਖਾਤਾ ਨਹੀਂ ਹੈ?',
+  // Footer
+  footer_tagline: 'ਹਰ ਕਿਸੇ ਲਈ, ਹਰ ਜਗ੍ਹਾ ਗੁਣਵੱਤਾਪੂਰਨ ਸਿੱਖਿਆ ਨੂੰ ਸੁਲਭ ਬਣਾਉਣਾ।',
+  footer_access_methods: 'ਪਹੁੰਚ ਦੇ ਤਰੀਕੇ',
+  footer_web_app: 'ਵੈੱਬ ਐਪਲੀਕੇਸ਼ਨ',
+  footer_sms_text: 'SMS: ਇੱਥੇ ਭੇਜੋ',
+  footer_call_text: 'ਕਾਲ:',
+  footer_community_stations: 'ਕਮਿਊਨਿਟੀ ਸਟੇਸ਼ਨ',
+  footer_support: 'ਸਹਾਇਤਾ',
+  footer_help_center: 'ਸਹਾਇਤਾ ਕੇਂਦਰ',
+  footer_contact_us: 'ਸਾਡੇ ਨਾਲ ਸੰਪਰਕ ਕਰੋ',
+  footer_privacy_policy: 'ਗੁਪਤਤਾ ਨੀਤੀ',
+  footer_terms_of_service: 'ਸੇਵਾ ਦੀਆਂ ਸ਼ਰਤਾਂ',
+  footer_copyright: 'ਡਿਜੀਟਲ ਸਿੱਖਿਆ ਦੇ ਵਿਭਾਜਨ ਨੂੰ ਪੂਰਾ ਕਰਨਾ।',
 }
 
 const hi: Dict = {
@@ -132,6 +158,19 @@ const hi: Dict = {
   sign_in: 'साइन इन',
   register_here: 'यहाँ रजिस्टर करें',
   already_account: 'खाता नहीं है?',
+  // Footer
+  footer_tagline: 'सभी के लिए, हर जगह गुणवत्तापूर्ण शिक्षा को सुलभ बनाना।',
+  footer_access_methods: 'पहुंच के तरीके',
+  footer_web_app: 'वेब एप्लिकेशन',
+  footer_sms_text: 'SMS: यहाँ भेजें',
+  footer_call_text: 'कॉल:',
+  footer_community_stations: 'सामुदायिक स्टेशन',
+  footer_support: 'सहायता',
+  footer_help_center: 'सहायता केंद्र',
+  footer_contact_us: 'हमसे संपर्क करें',
+  footer_privacy_policy: 'गोपनीयता नीति',
+  footer_terms_of_service: 'सेवा की शर्तें',
+  footer_copyright: 'डिजिटल शिक्षा के विभाजन को पूरा करना।',
 }
 
 const ta: Dict = {
@@ -174,6 +213,19 @@ const ta: Dict = {
   sign_in: 'சைன் இன்',
   register_here: 'இங்கே பதிவு செய்யவும்',
   already_account: 'கணக்கு இல்லையா?',
+  // Footer
+  footer_tagline: 'எல்லோருக்கும், எல்லா இடங்களிலும் தரமான கல்வியை அணுகக்கூடியதாக்குதல்.',
+  footer_access_methods: 'அணுகல் முறைகள்',
+  footer_web_app: 'வலை பயன்பாடு',
+  footer_sms_text: 'SMS: இங்கே அனுப்பவும்',
+  footer_call_text: 'அழைப்பு:',
+  footer_community_stations: 'சமூக நிலையங்கள்',
+  footer_support: 'ஆதரவு',
+  footer_help_center: 'உதவி மையம்',
+  footer_contact_us: 'எங்களைத் தொடர்பு கொள்ளுங்கள்',
+  footer_privacy_policy: 'தனியுரிமை கொள்கை',
+  footer_terms_of_service: 'சேவை விதிமுறைகள்',
+  footer_copyright: 'டிஜிட்டல் கல்வி பிரிவினையை நிறைவேற்றுதல்.',
 }
 
 const dictMap: Record<Lang, Dict> = { en, pa, hi, ta }
