@@ -47,21 +47,49 @@ export default function RagTutorPage() {
   const [respLang, setRespLang] = useState("en");
   const [grade, setGrade] = useState<string>("");
   const suggested: Record<string, string[]> = {
+    "1": ["Add 2 and 3", "Name three colors", "What comes after number 9?"],
+    "2": [
+      "Subtract 7 and 4",
+      "Name days of the week",
+      "What are living and non-living things?",
+    ],
+    "3": ["What is a noun?", "Add 15 and 6", "What are parts of a plant?"],
+    "4": ["Describe water cycle", "Subtract 50 and 27", "What is a fraction?"],
+    "5": [
+      "Explain photosynthesis simply",
+      "Add 245 and 178",
+      "What are states of matter?",
+    ],
     "6": [
       "What is photosynthesis?",
       "What are the three states of matter?",
       "How do you add fractions?",
       "Add 23 and 8",
     ],
+    "7": [
+      "Define integers and give examples",
+      "Difference between speed and velocity",
+      "What is an adjective?",
+    ],
     "8": [
       "What is motion?",
       "What is force?",
       "How do you multiply fractions?",
     ],
+    "9": [
+      "Define atom and molecule",
+      "What is coordinate geometry?",
+      "Explain types of motion",
+    ],
     "10": [
       "What is light?",
       "What is Ohm's law?",
       "What is a quadratic equation?",
+    ],
+    "11": [
+      "State Newton's laws of motion",
+      "What is a limit in calculus?",
+      "Explain chemical bonding",
     ],
     "12": [
       "What is angular momentum?",

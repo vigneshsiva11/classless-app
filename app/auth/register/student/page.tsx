@@ -1,16 +1,37 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookOpen, Phone, User, Hash, Building, Users, Lock, ArrowLeft } from "lucide-react"
-import { toast } from "sonner"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  BookOpen,
+  Phone,
+  User,
+  Hash,
+  Building,
+  Users,
+  Lock,
+  ArrowLeft,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export default function StudentRegisterPage() {
   const [formData, setFormData] = useState({
@@ -20,15 +41,44 @@ export default function StudentRegisterPage() {
     standard: "",
     gender: "",
     password: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
+      // Basic client-side validation
+      const phone = formData.parentMobile.trim();
+      const phoneDigits = phone.replace(/\D/g, "");
+      const isValidPhone =
+        /^\+?[0-9\-\s()]{7,20}$/.test(phone) &&
+        phoneDigits.length >= 10 &&
+        phoneDigits.length <= 15;
+      const name = formData.fullName.trim();
+      const isValidName = /^[A-Za-z\s'.-]{2,80}$/.test(name);
+      if (!isValidPhone) {
+        toast.error("Please enter a valid parent mobile number");
+        setIsLoading(false);
+        return;
+      }
+      if (!isValidName) {
+        toast.error("Please enter a valid full name");
+        setIsLoading(false);
+        return;
+      }
+      if (!/^\d{1,20}$/.test(formData.rollNumber.trim())) {
+        toast.error("Roll number should contain digits only");
+        setIsLoading(false);
+        return;
+      }
+      if (formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        setIsLoading(false);
+        return;
+      }
       const response = await fetch("/api/users", {
         method: "POST",
         headers: {
@@ -44,39 +94,47 @@ export default function StudentRegisterPage() {
           gender: formData.gender,
           password: formData.password,
         }),
-      })
+      });
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
-        localStorage.setItem("classless_user", JSON.stringify(result.data))
-        toast.success("Registration successful!")
-        router.push("/dashboard")
+        localStorage.setItem("classless_user", JSON.stringify(result.data));
+        toast.success("Registration successful!");
+        router.push("/dashboard");
       } else {
-        toast.error(result.error || "Registration failed")
+        toast.error(result.error || "Registration failed");
       }
     } catch (error) {
-      console.error("Registration error:", error)
-      toast.error("Registration failed. Please try again.")
+      console.error("Registration error:", error);
+      toast.error("Registration failed. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/auth/login" className="flex items-center text-gray-600 hover:text-gray-800 mb-4">
+          <Link
+            href="/auth/login"
+            className="flex items-center text-gray-600 hover:text-gray-800 mb-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to home
           </Link>
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity"
+          >
             <BookOpen className="h-8 w-8 text-blue-600" />
             <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
           </Link>
           <CardTitle>Student Registration</CardTitle>
-          <CardDescription>Create your student account to start learning with AI tutoring</CardDescription>
+          <CardDescription>
+            Create your student account to start learning with AI tutoring
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,8 +147,16 @@ export default function StudentRegisterPage() {
                   type="tel"
                   placeholder="+91-9876543210"
                   value={formData.parentMobile}
-                  onChange={(e) => setFormData({ ...formData, parentMobile: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (/^[0-9+\-\s()]*$/.test(next)) {
+                      setFormData({ ...formData, parentMobile: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="tel"
+                  pattern="^[0-9+\-\s()]{7,20}$"
+                  maxLength={20}
                   required
                 />
               </div>
@@ -105,8 +171,16 @@ export default function StudentRegisterPage() {
                   type="text"
                   placeholder="Enter your full name"
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (/^[A-Za-z\s'.-]*$/.test(next)) {
+                      setFormData({ ...formData, fullName: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="text"
+                  pattern="^[A-Za-z\s'.-]{2,80}$"
+                  maxLength={80}
                   required
                 />
               </div>
@@ -121,8 +195,16 @@ export default function StudentRegisterPage() {
                   type="text"
                   placeholder="Enter your roll number"
                   value={formData.rollNumber}
-                  onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (/^\d*$/.test(next)) {
+                      setFormData({ ...formData, rollNumber: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="numeric"
+                  pattern="^\d{1,20}$"
+                  maxLength={20}
                   required
                 />
               </div>
@@ -134,7 +216,9 @@ export default function StudentRegisterPage() {
                 <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
                 <Select
                   value={formData.standard}
-                  onValueChange={(value) => setFormData({ ...formData, standard: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, standard: value })
+                  }
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select your standard" />
@@ -158,7 +242,9 @@ export default function StudentRegisterPage() {
                 <Users className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
                 <Select
                   value={formData.gender}
-                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, gender: value })
+                  }
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select your gender" />
@@ -167,7 +253,9 @@ export default function StudentRegisterPage() {
                     <SelectItem value="female">Female</SelectItem>
                     <SelectItem value="male">Male</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
-                    <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    <SelectItem value="prefer_not_to_say">
+                      Prefer not to say
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -182,14 +270,21 @@ export default function StudentRegisterPage() {
                   type="password"
                   placeholder="Create a strong password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   className="pl-10"
+                  minLength={6}
                   required
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full bg-green-600 hover:bg-green-700"
+              disabled={isLoading}
+            >
               {isLoading ? "Creating Account..." : "Create Student Account"}
             </Button>
           </form>
@@ -197,7 +292,10 @@ export default function StudentRegisterPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have a student account?{" "}
-              <Link href="/auth/login/student" className="text-green-600 hover:underline">
+              <Link
+                href="/auth/login/student"
+                className="text-green-600 hover:underline"
+              >
                 Sign in here
               </Link>
             </p>
@@ -205,5 +303,5 @@ export default function StudentRegisterPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

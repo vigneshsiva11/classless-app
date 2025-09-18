@@ -1,17 +1,29 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookOpen, Phone, User, MapPin } from "lucide-react"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BookOpen, Phone, User, MapPin } from "lucide-react";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -25,24 +37,57 @@ export default function RegisterPage() {
     gender: "",
     password: "",
     teacherEmail: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     // Pre-fill phone number if coming from login
-    const phone = searchParams.get("phone")
+    const phone = searchParams.get("phone");
     if (phone) {
-      setFormData((prev) => ({ ...prev, phoneNumber: phone }))
+      setFormData((prev) => ({ ...prev, phoneNumber: phone }));
     }
-  }, [searchParams])
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
+      // Basic client-side validation
+      const phone = formData.phoneNumber.trim();
+      const name = formData.name.trim();
+      const phoneDigits = phone.replace(/\D/g, "");
+      const isValidPhone =
+        /^\+?[0-9\-\s()]{7,20}$/.test(phone) &&
+        phoneDigits.length >= 10 &&
+        phoneDigits.length <= 15;
+      const isValidName = /^[A-Za-z\s'.-]{2,80}$/.test(name);
+      if (!isValidPhone) {
+        toast.error("Please enter a valid phone number");
+        setIsLoading(false);
+        return;
+      }
+      if (!isValidName) {
+        toast.error("Please enter a valid full name");
+        setIsLoading(false);
+        return;
+      }
+      if (
+        formData.userType === "student" &&
+        formData.rollNumber.trim() &&
+        !/^\d{1,20}$/.test(formData.rollNumber.trim())
+      ) {
+        toast.error("Roll number should contain digits only");
+        setIsLoading(false);
+        return;
+      }
+      if (formData.password && formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        setIsLoading(false);
+        return;
+      }
       const response = await fetch("/api/users", {
         method: "POST",
         headers: {
@@ -58,36 +103,41 @@ export default function RegisterPage() {
           teacher_email: formData.teacherEmail || undefined,
           password: formData.password || undefined,
         }),
-      })
+      });
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
         // Store user info in localStorage
-        localStorage.setItem("classless_user", JSON.stringify(result.data))
-        toast.success("Registration successful!")
-        router.push("/dashboard")
+        localStorage.setItem("classless_user", JSON.stringify(result.data));
+        toast.success("Registration successful!");
+        router.push("/dashboard");
       } else {
-        toast.error(result.error || "Registration failed")
+        toast.error(result.error || "Registration failed");
       }
     } catch (error) {
-      console.error("Registration error:", error)
-      toast.error("Registration failed. Please try again.")
+      console.error("Registration error:", error);
+      toast.error("Registration failed. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity"
+          >
             <BookOpen className="h-8 w-8 text-blue-600" />
             <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
           </Link>
           <CardTitle>Join Classless</CardTitle>
-          <CardDescription>Create your account to start learning with AI tutoring</CardDescription>
+          <CardDescription>
+            Create your account to start learning with AI tutoring
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -100,8 +150,17 @@ export default function RegisterPage() {
                   type="tel"
                   placeholder="+91-9876543210"
                   value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    // Allow digits, +, -, spaces, parentheses; prevent letters
+                    if (/^[0-9+\-\s()]*$/.test(next)) {
+                      setFormData({ ...formData, phoneNumber: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="tel"
+                  pattern="^[0-9+\-\s()]{7,20}$"
+                  maxLength={20}
                   required
                 />
               </div>
@@ -116,8 +175,16 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="Enter your full name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (/^[A-Za-z\s'.-]*$/.test(next)) {
+                      setFormData({ ...formData, name: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="text"
+                  pattern="^[A-Za-z\s'.-]{2,80}$"
+                  maxLength={80}
                   required
                 />
               </div>
@@ -127,7 +194,9 @@ export default function RegisterPage() {
               <Label htmlFor="userType">I am a</Label>
               <Select
                 value={formData.userType}
-                onValueChange={(value) => setFormData({ ...formData, userType: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, userType: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role" />
@@ -143,7 +212,9 @@ export default function RegisterPage() {
               <Label htmlFor="language">Preferred Language</Label>
               <Select
                 value={formData.preferredLanguage}
-                onValueChange={(value) => setFormData({ ...formData, preferredLanguage: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, preferredLanguage: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -167,7 +238,9 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="City, State"
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
                   className="pl-10"
                 />
               </div>
@@ -182,7 +255,15 @@ export default function RegisterPage() {
                     type="text"
                     placeholder="Enter your roll number"
                     value={formData.rollNumber}
-                    onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      if (/^\d*$/.test(next)) {
+                        setFormData({ ...formData, rollNumber: next });
+                      }
+                    }}
+                    inputMode="numeric"
+                    pattern="^\d{1,20}$"
+                    maxLength={20}
                     required
                   />
                 </div>
@@ -191,7 +272,9 @@ export default function RegisterPage() {
                   <Label htmlFor="classStandard">Class Standard</Label>
                   <Select
                     value={formData.classStandard}
-                    onValueChange={(value) => setFormData({ ...formData, classStandard: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, classStandard: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your class" />
@@ -212,7 +295,9 @@ export default function RegisterPage() {
                   <Label htmlFor="gender">Gender</Label>
                   <Select
                     value={formData.gender}
-                    onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, gender: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your gender" />
@@ -221,7 +306,9 @@ export default function RegisterPage() {
                       <SelectItem value="female">Female</SelectItem>
                       <SelectItem value="male">Male</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                      <SelectItem value="prefer_not_to_say">
+                        Prefer not to say
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -233,7 +320,10 @@ export default function RegisterPage() {
                     type="password"
                     placeholder="Create a password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    minLength={6}
                     required
                   />
                 </div>
@@ -249,7 +339,9 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="Enter your email address"
                     value={formData.teacherEmail}
-                    onChange={(e) => setFormData({ ...formData, teacherEmail: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, teacherEmail: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -261,14 +353,21 @@ export default function RegisterPage() {
                     type="password"
                     placeholder="Create a password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    minLength={6}
                     required
                   />
                 </div>
               </>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading || !formData.userType}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || !formData.userType}
+            >
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
@@ -276,7 +375,10 @@ export default function RegisterPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/auth/login" className="text-blue-600 hover:underline">
+              <Link
+                href="/auth/login"
+                className="text-blue-600 hover:underline"
+              >
                 Sign in here
               </Link>
             </p>
@@ -284,5 +386,5 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,65 +1,93 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { BookOpen, Hash, Lock, ArrowLeft } from "lucide-react"
-import { toast } from "sonner"
-import { getTollFreeNumber } from "@/lib/config"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { BookOpen, Hash, Lock, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { getTollFreeNumber } from "@/lib/config";
 
 export default function StudentLoginPage() {
   const [formData, setFormData] = useState({
     rollNumber: "",
     password: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
+      // Client-side validation
+      const roll = formData.rollNumber.trim();
+      if (!/^\d{1,20}$/.test(roll)) {
+        toast.error("Roll number should contain digits only");
+        setIsLoading(false);
+        return;
+      }
+      if (!formData.password || formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        setIsLoading(false);
+        return;
+      }
       // For demo purposes, we'll check if user exists by roll number
       // In a real app, you'd have a proper authentication system
-      const response = await fetch(`/api/users?roll_number=${encodeURIComponent(formData.rollNumber)}`)
-      const result = await response.json()
+      const response = await fetch(
+        `/api/users?roll_number=${encodeURIComponent(formData.rollNumber)}`
+      );
+      const result = await response.json();
 
       if (result.success && result.data) {
-        localStorage.setItem("classless_user", JSON.stringify(result.data))
-        toast.success("Login successful!")
-        router.push("/dashboard")
+        localStorage.setItem("classless_user", JSON.stringify(result.data));
+        toast.success("Login successful!");
+        router.push("/dashboard");
       } else {
-        toast.error("Student not found. Please register first.")
-        router.push("/auth/register/student")
+        toast.error("Student not found. Please register first.");
+        router.push("/auth/register/student");
       }
     } catch (error) {
-      console.error("Login error:", error)
-      toast.error("Login failed. Please try again.")
+      console.error("Login error:", error);
+      toast.error("Login failed. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/auth/login" className="flex items-center text-gray-600 hover:text-gray-800 mb-4">
+          <Link
+            href="/auth/login"
+            className="flex items-center text-gray-600 hover:text-gray-800 mb-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to home
           </Link>
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity"
+          >
             <BookOpen className="h-8 w-8 text-blue-600" />
             <h1 className="text-2xl font-bold text-gray-900">Classless</h1>
           </Link>
           <CardTitle>Student Login</CardTitle>
-          <CardDescription>Enter your credentials to access your learning dashboard</CardDescription>
+          <CardDescription>
+            Enter your credentials to access your learning dashboard
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -72,8 +100,16 @@ export default function StudentLoginPage() {
                   type="text"
                   placeholder="Enter your roll number"
                   value={formData.rollNumber}
-                  onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (/^\d*$/.test(next)) {
+                      setFormData({ ...formData, rollNumber: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="numeric"
+                  pattern="^\d{1,20}$"
+                  maxLength={20}
                   required
                 />
               </div>
@@ -88,8 +124,11 @@ export default function StudentLoginPage() {
                   type="password"
                   placeholder="Enter your password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   className="pl-10"
+                  minLength={6}
                   required
                 />
               </div>
@@ -103,7 +142,10 @@ export default function StudentLoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have a student account?{" "}
-              <Link href="/auth/register/student" className="text-blue-600 hover:underline">
+              <Link
+                href="/auth/register/student"
+                className="text-blue-600 hover:underline"
+              >
                 Register here
               </Link>
             </p>
@@ -113,11 +155,12 @@ export default function StudentLoginPage() {
             <p className="text-xs text-gray-500 text-center">
               You can also access Classless via:
               <br />
-              SMS: Text to {getTollFreeNumber('sms')} | Call: {getTollFreeNumber('voice')}
+              SMS: Text to {getTollFreeNumber("sms")} | Call:{" "}
+              {getTollFreeNumber("voice")}
             </p>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

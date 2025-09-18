@@ -27,7 +27,7 @@ const corpus: DocChunk[] = [
     text: "In Class 6 Science, matter is anything that has mass and takes up space. There are three states of matter: solid, liquid, and gas. Water can exist in all three states.",
     metadata: { subject: "science", grade: 6, chapter: "Matter" },
   },
-  
+
   // Class 8 Content
   {
     id: "science-8-motion-1",
@@ -44,7 +44,7 @@ const corpus: DocChunk[] = [
     text: "In Class 8 Science, Force is a push or pull that can change the state of motion of an object. Newton's first law states that an object at rest stays at rest unless acted upon by an external force.",
     metadata: { subject: "science", grade: 8, chapter: "Force" },
   },
-  
+
   // Class 10 Content
   {
     id: "science-10-light-1",
@@ -61,7 +61,7 @@ const corpus: DocChunk[] = [
     text: "In Class 10 Science, Electric current is the flow of electric charge. Ohm's law states that V = IR, where V is voltage, I is current, and R is resistance. Electric power is given by P = VI.",
     metadata: { subject: "science", grade: 10, chapter: "Electricity" },
   },
-  
+
   // Class 12 Content
   {
     id: "physics-12-mechanics-1",
@@ -102,14 +102,18 @@ function tryBasicMath(question: string): string | null {
     let result: number | null = null;
     switch (opMatch[0]) {
       case "+":
-        result = a + b; break;
+        result = a + b;
+        break;
       case "-":
-        result = a - b; break;
+        result = a - b;
+        break;
       case "*":
-        result = a * b; break;
+        result = a * b;
+        break;
       case "/":
         // Avoid division by zero
-        result = b === 0 ? NaN : a / b; break;
+        result = b === 0 ? NaN : a / b;
+        break;
     }
     if (result !== null && !Number.isNaN(result)) {
       return `${a} ${opMatch[0]} ${b} = ${result}`;
@@ -129,7 +133,9 @@ async function ensureEmbeddings(embeddingModel: any) {
   } catch (error) {
     console.error("[RAG] Error generating embeddings:", error);
     // If embeddings fail, we'll use a simple text-based fallback
-    throw new Error("Failed to generate embeddings. Please check your GEMINI_API_KEY.");
+    throw new Error(
+      "Failed to generate embeddings. Please check your GEMINI_API_KEY."
+    );
   }
 }
 
@@ -210,12 +216,52 @@ export async function POST(request: NextRequest) {
           if (text) contexts.push(text);
         });
         retrieved = contexts.join("\n\n");
+        // If Pinecone returns no context, fall back to in-memory filtered by grade
+        if (!retrieved) {
+          await ensureEmbeddings(embeddingModel);
+          const q2 = await embeddingModel.embedContent(question);
+          const qEmbedding2 = q2.embedding.values as unknown as number[];
+          const baseCorpus =
+            typeof grade === "number"
+              ? corpus.filter((c) => c.metadata?.grade === grade)
+              : corpus;
+          ranked = baseCorpus
+            .map((c) => ({
+              chunk: c,
+              score: cosineSimilarity(c.embedding!, qEmbedding2),
+            }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 4);
+          retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
+          // Keyword fallback if still empty
+          if (!retrieved) {
+            const questionLower2 = question.toLowerCase();
+            const matchingChunks2 = baseCorpus.filter((c) => {
+              const textLower = c.text.toLowerCase();
+              return questionLower2
+                .split(/\s+/)
+                .some(
+                  (word: string) => word.length > 3 && textLower.includes(word)
+                );
+            });
+            if (matchingChunks2.length > 0) {
+              retrieved = matchingChunks2
+                .slice(0, 3)
+                .map((c) => c.text)
+                .join("\n\n");
+            }
+          }
+        }
       } catch (e) {
         // Fallback to in-memory
         await ensureEmbeddings(embeddingModel);
         const q = await embeddingModel.embedContent(question);
         const qEmbedding = q.embedding.values as unknown as number[];
-        ranked = corpus
+        const baseCorpus =
+          typeof grade === "number"
+            ? corpus.filter((c) => c.metadata?.grade === grade)
+            : corpus;
+        ranked = baseCorpus
           .map((c) => ({
             chunk: c,
             score: cosineSimilarity(c.embedding!, qEmbedding),
@@ -226,13 +272,14 @@ export async function POST(request: NextRequest) {
         // If nothing matched after grade filtering, attempt keyword fallback
         if (!retrieved) {
           const questionLower2 = question.toLowerCase();
-          const matchingChunks2 = corpus.filter((c) => {
+          const matchingChunks2 = baseCorpus.filter((c) => {
             const textLower = c.text.toLowerCase();
             const hasKeyword = questionLower2
               .split(/\s+/)
-              .some((word: string) => word.length > 3 && textLower.includes(word));
-            const gradeMatch = !grade || c.metadata?.grade === grade;
-            return hasKeyword && gradeMatch;
+              .some(
+                (word: string) => word.length > 3 && textLower.includes(word)
+              );
+            return hasKeyword;
           });
           if (matchingChunks2.length > 0) {
             retrieved = matchingChunks2
@@ -248,38 +295,58 @@ export async function POST(request: NextRequest) {
         await ensureEmbeddings(embeddingModel);
         const q = await embeddingModel.embedContent(question);
         const qEmbedding = q.embedding.values as unknown as number[];
-        ranked = corpus
+        const baseCorpus =
+          typeof grade === "number"
+            ? corpus.filter((c) => c.metadata?.grade === grade)
+            : corpus;
+        ranked = baseCorpus
           .map((c) => ({
             chunk: c,
             score: cosineSimilarity(c.embedding!, qEmbedding),
           }))
           .sort((a, b) => b.score - a.score)
           .slice(0, 4);
-        // Apply grade filter for in-memory corpus if provided
-        if (typeof grade === "number") {
-          ranked = ranked.filter((r) => r.chunk?.metadata?.grade === grade);
-        }
         retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
       } catch (error) {
-        console.error("[RAG] Using text-based fallback due to API error:", error);
+        console.error(
+          "[RAG] Using text-based fallback due to API error:",
+          error
+        );
         // Simple text-based matching as fallback
         const questionLower = question.toLowerCase();
         const keywordAllow = new Set([
-          "add", "plus", "sum", "subtract", "minus", "difference",
-          "multiply", "times", "product", "divide", "divided"
+          "add",
+          "plus",
+          "sum",
+          "subtract",
+          "minus",
+          "difference",
+          "multiply",
+          "times",
+          "product",
+          "divide",
+          "divided",
         ]);
-        const matchingChunks = corpus.filter((c) => {
+        const baseCorpus =
+          typeof grade === "number"
+            ? corpus.filter((c) => c.metadata?.grade === grade)
+            : corpus;
+        const matchingChunks = baseCorpus.filter((c) => {
           const textLower = c.text.toLowerCase();
           const hasKeyword = questionLower.split(/\s+/).some((word: string) => {
             const w = word.replace(/[^a-z]/g, "");
-            return (w.length >= 3 && textLower.includes(w)) || keywordAllow.has(w);
+            return (
+              (w.length >= 3 && textLower.includes(w)) || keywordAllow.has(w)
+            );
           });
-          const gradeMatch = !grade || c.metadata?.grade === grade;
-          return hasKeyword && gradeMatch;
+          return hasKeyword;
         });
-        
+
         if (matchingChunks.length > 0) {
-          retrieved = matchingChunks.slice(0, 3).map(c => c.text).join("\n\n");
+          retrieved = matchingChunks
+            .slice(0, 3)
+            .map((c) => c.text)
+            .join("\n\n");
         }
       }
     }
@@ -309,7 +376,9 @@ export async function POST(request: NextRequest) {
 
     // Build prompt (cap context to ~2k chars for speed)
     const gradeText = grade ? `Class ${grade}` : "the appropriate class level";
-    const prompt = `You are an AI tutor for ${gradeText} students.\nUse only the following context to answer the question.\nIf the answer is not in the context, say "I don't know because it is out of syllabus."\nRespond concisely in language code: ${answerLang}.\n\nContext:\n${trimmedContext}\n\nQuestion (lang=${language || "en"}):\n${question}\n\nAnswer:`;
+    const prompt = `You are an AI tutor for ${gradeText} students.\nUse only the following context to answer the question.\nIf the answer is not in the context, say "I don't know because it is out of syllabus."\nRespond concisely in language code: ${answerLang}.\n\nContext:\n${trimmedContext}\n\nQuestion (lang=${
+      language || "en"
+    }):\n${question}\n\nAnswer:`;
 
     // Try fast model with small fallback and brief backoff to handle 503s
     const models = [
