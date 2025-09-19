@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,13 @@ import {
   ArrowRight,
   Lightbulb,
   Star,
+  Globe2,
+  Building2,
+  Landmark,
+  Wallet,
+  Layers,
+  RefreshCw,
+  NotebookPen,
 } from "lucide-react";
 
 export default function CareerGuidancePage() {
@@ -158,6 +165,8 @@ export default function CareerGuidancePage() {
     },
   ];
 
+  // (Scholarships removed on this page; internships only)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100">
       {/* Header */}
@@ -234,6 +243,177 @@ export default function CareerGuidancePage() {
                     {interest.name}
                   </div>
                 </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Career Roadmaps */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Layers className="h-5 w-5 text-indigo-600" />
+              <span>Career Roadmaps</span>
+            </CardTitle>
+            <CardDescription>
+              Step-by-step: Education → Skills → Internships → First Job →
+              Growth
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid lg:grid-cols-3 gap-6">
+              {[
+                {
+                  title: "Software Engineer",
+                  steps: [
+                    "Education: B.Tech/BE/BS (CS/IT) or Bootcamp",
+                    "Skills: DSA, Web/Backend, Git, Cloud basics",
+                    "Internships: Open source, startups, hackathons",
+                    "First Job: SDE, Full-stack, QA automation",
+                    "Growth: Senior Engineer → Tech Lead → Architect",
+                  ],
+                },
+                {
+                  title: "Doctor",
+                  steps: [
+                    "Education: MBBS → Internship",
+                    "Skills: Clinical skills, patient care, research",
+                    "Residency: Choose specialization (MD/MS)",
+                    "First Job: Resident/Junior Doctor",
+                    "Growth: Specialist → Consultant → Medical Director",
+                  ],
+                },
+                {
+                  title: "Architect",
+                  steps: [
+                    "Education: B.Arch + Council registration",
+                    "Skills: AutoCAD, Revit, BIM, design thinking",
+                    "Internships: Design firms, site exposure",
+                    "First Job: Junior Architect",
+                    "Growth: Senior Architect → Project Lead → Principal",
+                  ],
+                },
+              ].map((r, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">{r.title}</h4>
+                    <Badge variant="secondary">5 stages</Badge>
+                  </div>
+                  <ol className="space-y-2 text-sm text-gray-700 list-decimal pl-4">
+                    {r.steps.map((s, idx) => (
+                      <li key={idx}>{s}</li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Internship Opportunities */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Briefcase className="h-5 w-5 text-emerald-600" />
+              <span>Internship Opportunities</span>
+            </CardTitle>
+            <CardDescription>
+              Popular internship portals & current openings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900">
+                Internship Portals & Openings
+              </h4>
+              <ul className="space-y-2 text-sm text-blue-700">
+                {[
+                  { name: "Internshala", url: "https://internshala.com" },
+                  {
+                    name: "LinkedIn Jobs",
+                    url: "https://www.linkedin.com/jobs/",
+                  },
+                  {
+                    name: "Naukri Internships",
+                    url: "https://www.naukri.com/internship-jobs",
+                  },
+                  { name: "UN Internships", url: "https://careers.un.org/" },
+                  {
+                    name: "Google Careers (Student)",
+                    url: "https://careers.google.com/students/",
+                  },
+                ].map((p, i) => (
+                  <li key={i}>
+                    <Link
+                      href={p.url}
+                      target="_blank"
+                      className="hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Industry Insights */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              <span>Industry Insights</span>
+            </CardTitle>
+            <CardDescription>
+              Monthly trends and 5–10 year outlook
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid lg:grid-cols-3 gap-6">
+              {[
+                {
+                  title: "Technology",
+                  points: [
+                    "AI/ML hiring up, data roles expanding",
+                    "Cybersecurity demand strong",
+                    "Cloud-native & DevOps core",
+                  ],
+                  future: "High demand for AI, data, security",
+                },
+                {
+                  title: "Healthcare",
+                  points: [
+                    "Telemedicine adoption steady",
+                    "Shortage of nurses/specialists",
+                    "Health informatics growing",
+                  ],
+                  future: "Clinicians + digital health rise",
+                },
+                {
+                  title: "Manufacturing",
+                  points: [
+                    "Automation/Robotics investment",
+                    "EV supply chain ramping",
+                    "Quality & safety roles stable",
+                  ],
+                  future: "Robotics, EV, mechatronics",
+                },
+              ].map((x, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">{x.title}</h4>
+                    <Badge variant="secondary">Monthly</Badge>
+                  </div>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    {x.points.map((p, idx) => (
+                      <li key={idx}>• {p}</li>
+                    ))}
+                  </ul>
+                  <div className="text-xs text-gray-500 mt-3">
+                    Outlook: {x.future}
+                  </div>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -341,6 +521,443 @@ export default function CareerGuidancePage() {
                       <span className="font-medium">{career.education}</span>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skill-Building Resources */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <NotebookPen className="h-5 w-5 text-blue-600" />
+              <span>Skill-Building Resources</span>
+            </CardTitle>
+            <CardDescription>Free/paid platforms by domain</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  title: "Tech",
+                  links: [
+                    {
+                      n: "YouTube: freeCodeCamp",
+                      u: "https://www.youtube.com/c/Freecodecamp",
+                    },
+                    { n: "Coursera", u: "https://www.coursera.org" },
+                    { n: "NPTEL/SWAYAM", u: "https://swayam.gov.in" },
+                  ],
+                },
+                {
+                  title: "Healthcare",
+                  links: [
+                    { n: "WHO Learning", u: "https://openwho.org" },
+                    {
+                      n: "Coursera: Health",
+                      u: "https://www.coursera.org/browse/health",
+                    },
+                  ],
+                },
+                {
+                  title: "Arts & Design",
+                  links: [
+                    {
+                      n: "YouTube: The Futur",
+                      u: "https://www.youtube.com/@thefuturishere",
+                    },
+                    { n: "Behance", u: "https://www.behance.net" },
+                  ],
+                },
+                {
+                  title: "Business",
+                  links: [
+                    { n: "Harvard Online", u: "https://online.hbs.edu" },
+                    {
+                      n: "edX Business",
+                      u: "https://www.edx.org/learn/business",
+                    },
+                  ],
+                },
+                {
+                  title: "Education",
+                  links: [
+                    { n: "Diksha", u: "https://diksha.gov.in" },
+                    {
+                      n: "Coursera: Teaching",
+                      u: "https://www.coursera.org/browse/teaching-and-learning",
+                    },
+                  ],
+                },
+                {
+                  title: "Engineering",
+                  links: [
+                    { n: "MIT OCW", u: "https://ocw.mit.edu" },
+                    {
+                      n: "YouTube: Learn Engineering",
+                      u: "https://www.youtube.com/@LearnEngineering",
+                    },
+                  ],
+                },
+              ].map((c, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    {c.title}
+                  </h4>
+                  <ul className="space-y-2 text-sm">
+                    {c.links.map((l, idx) => (
+                      <li key={idx}>
+                        <Link
+                          href={l.u}
+                          target="_blank"
+                          className="text-blue-700 hover:underline"
+                        >
+                          {l.n}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Government & Competitive Exams */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Landmark className="h-5 w-5 text-rose-600" />
+              <span>Government & Competitive Exams</span>
+            </CardTitle>
+            <CardDescription>
+              Dates, eligibility, and preparation resources
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid lg:grid-cols-3 gap-6">
+              {[
+                {
+                  exam: "UPSC Civil Services",
+                  date: "Prelims: May/June",
+                  eligibility: "Graduate, Age 21–32",
+                  link: "https://upsc.gov.in",
+                },
+                {
+                  exam: "SSC CGL",
+                  date: "Tier I: Yearly",
+                  eligibility: "Graduate",
+                  link: "https://ssc.nic.in",
+                },
+                {
+                  exam: "IBPS PO (Banking)",
+                  date: "Prelims: Aug–Oct",
+                  eligibility: "Graduate",
+                  link: "https://www.ibps.in",
+                },
+                {
+                  exam: "NDA (Defense)",
+                  date: "Twice yearly",
+                  eligibility: "12th pass",
+                  link: "https://upsc.gov.in/examinations/NDA-NAVAL-ACADEMY-EXAMINATION",
+                },
+              ].map((e, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">{e.exam}</h4>
+                    <Badge variant="secondary">{e.date}</Badge>
+                  </div>
+                  <div className="text-sm text-gray-700 mb-3">
+                    Eligibility: {e.eligibility}
+                  </div>
+                  <Link href={e.link} target="_blank">
+                    <Button variant="outline" className="w-full">
+                      Details
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Career Switching Guides */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <RefreshCw className="h-5 w-5 text-orange-600" />
+              <span>Career Switching Guides</span>
+            </CardTitle>
+            <CardDescription>
+              How to move from one field to another
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  from: "Teacher",
+                  to: "Instructional Designer",
+                  steps: [
+                    "Build portfolio (lesson → e-learning)",
+                    "Learn tools (Articulate/Captivate/LMS)",
+                    "Certifications (IDOL, Coursera)",
+                    "Apply to edtech/L&D roles",
+                  ],
+                },
+                {
+                  from: "Mechanical Engineer",
+                  to: "Data Analyst",
+                  steps: [
+                    "Excel → SQL → Python",
+                    "Industry projects (OEE, quality)",
+                    "Portfolio + GitHub",
+                    "Apply to analyst roles",
+                  ],
+                },
+                {
+                  from: "Sales",
+                  to: "Product Manager",
+                  steps: [
+                    "Learn discovery/roadmap",
+                    "Write PRDs, manage tickets",
+                    "Side projects or courses",
+                    "Internal transfer/APM",
+                  ],
+                },
+              ].map((p, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">
+                      {p.from} → {p.to}
+                    </h4>
+                    <Badge variant="secondary">Path</Badge>
+                  </div>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    {p.steps.map((s, idx) => (
+                      <li key={idx}>• {s}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Job Market Salary Insights */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Wallet className="h-5 w-5 text-teal-600" />
+              <span>Job Market Salary Insights</span>
+            </CardTitle>
+            <CardDescription>
+              Average salaries by experience level
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  role: "Software Engineer",
+                  salaries: [
+                    { l: "Fresher", v: "₹4–10 LPA" },
+                    { l: "Mid-level", v: "₹12–30 LPA" },
+                    { l: "Senior", v: "₹30–70+ LPA" },
+                  ],
+                },
+                {
+                  role: "Data Analyst",
+                  salaries: [
+                    { l: "Fresher", v: "₹3–8 LPA" },
+                    { l: "Mid-level", v: "₹8–18 LPA" },
+                    { l: "Senior", v: "₹18–35 LPA" },
+                  ],
+                },
+                {
+                  role: "Civil Engineer",
+                  salaries: [
+                    { l: "Fresher", v: "₹3–6 LPA" },
+                    { l: "Mid-level", v: "₹6–12 LPA" },
+                    { l: "Senior", v: "₹12–25 LPA" },
+                  ],
+                },
+              ].map((r, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">{r.role}</h4>
+                  <div className="space-y-2 text-sm">
+                    {r.salaries.map((s, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-gray-600">{s.l}</span>
+                        <span className="font-medium text-gray-900">{s.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Recruiters & Companies */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5 text-purple-600" />
+              <span>Top Recruiters & Companies</span>
+            </CardTitle>
+            <CardDescription>
+              Leading companies and career pages
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  sector: "Technology",
+                  links: [
+                    { n: "Google Careers", u: "https://careers.google.com" },
+                    {
+                      n: "Microsoft Careers",
+                      u: "https://careers.microsoft.com",
+                    },
+                    { n: "TCS Careers", u: "https://www.tcs.com/careers" },
+                  ],
+                },
+                {
+                  sector: "Healthcare",
+                  links: [
+                    {
+                      n: "Apollo Hospitals",
+                      u: "https://www.apollohospitals.com/careers/",
+                    },
+                    {
+                      n: "Fortis Healthcare",
+                      u: "https://www.fortishealthcare.com/careers",
+                    },
+                  ],
+                },
+                {
+                  sector: "Finance",
+                  links: [
+                    {
+                      n: "HDFC Bank Careers",
+                      u: "https://www.hdfcbank.com/careers",
+                    },
+                    {
+                      n: "Goldman Sachs Careers",
+                      u: "https://www.goldmansachs.com/careers/",
+                    },
+                  ],
+                },
+              ].map((c, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    {c.sector}
+                  </h4>
+                  <ul className="space-y-2 text-sm">
+                    {c.links.map((l, idx) => (
+                      <li key={idx}>
+                        <Link
+                          href={l.u}
+                          target="_blank"
+                          className="text-blue-700 hover:underline"
+                        >
+                          {l.n}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Soft Skills & Workplace Readiness */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-amber-600" />
+              <span>Soft Skills & Workplace Readiness</span>
+            </CardTitle>
+            <CardDescription>
+              Communication, teamwork, leadership, etiquette
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                "Communication: active listening, concise writing, public speaking",
+                "Teamwork: collaboration tools, conflict resolution",
+                "Leadership: decision-making, delegation, feedback",
+                "Emotional Intelligence: self-awareness, empathy",
+                "Workplace: email, meeting, time management",
+                "Remote: async comms, focus, documentation",
+              ].map((t, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="text-sm text-gray-700">{t}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Global Career Opportunities */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Globe2 className="h-5 w-5 text-cyan-600" />
+              <span>Global Career Opportunities</span>
+            </CardTitle>
+            <CardDescription>Work abroad, visas, and demand</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  country: "USA",
+                  visa: "H-1B, F-1 OPT",
+                  demand: "Software, data, healthcare, semiconductor",
+                  link: "https://travel.state.gov/",
+                },
+                {
+                  country: "Canada",
+                  visa: "Express Entry, PGWP",
+                  demand: "Developers, healthcare, construction, finance",
+                  link: "https://www.canada.ca/en/immigration-refugees-citizenship.html",
+                },
+                {
+                  country: "Germany",
+                  visa: "EU Blue Card, Job Seeker",
+                  demand: "Engineering, automotive, software",
+                  link: "https://www.make-it-in-germany.com/en/",
+                },
+                {
+                  country: "Japan",
+                  visa: "Highly Skilled, Specified Skilled",
+                  demand: "Manufacturing, robotics, IT",
+                  link: "https://www.mofa.go.jp/",
+                },
+              ].map((c, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">{c.country}</h4>
+                    <Badge variant="secondary">Visa</Badge>
+                  </div>
+                  <div className="text-sm text-gray-700 mb-1">{c.visa}</div>
+                  <div className="text-xs text-gray-500 mb-3">
+                    Demand: {c.demand}
+                  </div>
+                  <Link href={c.link} target="_blank">
+                    <Button variant="outline" className="w-full">
+                      Official Info
+                    </Button>
+                  </Link>
                 </div>
               ))}
             </div>

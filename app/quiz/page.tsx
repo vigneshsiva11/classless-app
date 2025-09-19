@@ -36,6 +36,7 @@ export default function QuizPage() {
     "selection"
   );
   const [questionCount, setQuestionCount] = useState<number>(5);
+  const [showCountPrompt, setShowCountPrompt] = useState<boolean>(false);
   const pathname = usePathname();
 
   const subjects = [
@@ -183,17 +184,14 @@ export default function QuizPage() {
     if (selectedSubject && selectedLevel) {
       // If General Concepts is selected, show concept selection first
       if (selectedSubject === "general") {
-        setQuizState("conceptSelection");
+        if (!selectedConcept) {
+          setQuizState("conceptSelection");
+          return;
+        }
       } else {
-        // For other subjects, redirect directly to quiz interface
-        const params = new URLSearchParams({
-          subject: selectedSubject,
-          level: selectedLevel,
-          count: questionCount.toString(),
-        });
-
-        window.location.href = `/quiz/interface?${params.toString()}`;
+        // non-general subjects can proceed to count prompt
       }
+      setShowCountPrompt(true);
     }
   };
 
@@ -214,15 +212,7 @@ export default function QuizPage() {
 
   const handleConceptSelection = (conceptId: string) => {
     setSelectedConcept(conceptId);
-    // Redirect to quiz interface with concept
-    const params = new URLSearchParams({
-      subject: selectedSubject,
-      level: selectedLevel,
-      count: questionCount.toString(),
-      concept: conceptId,
-    });
-
-    window.location.href = `/quiz/interface?${params.toString()}`;
+    setShowCountPrompt(true);
   };
 
   return (
@@ -448,6 +438,57 @@ export default function QuizPage() {
             </Card>
           ))}
         </div>
+
+        {/* Question Count Prompt */}
+        {showCountPrompt && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                <span>How many questions?</span>
+              </CardTitle>
+              <CardDescription>
+                Enter how many questions you want to generate for this quiz
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4 items-end">
+                <div className="md:col-span-2">
+                  <Label htmlFor="question-count">Number of questions</Label>
+                  <Input
+                    id="question-count"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={questionCount}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (!Number.isNaN(v))
+                        setQuestionCount(Math.max(1, Math.min(50, v)));
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Range: 1–50</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={handleQuestionCountSubmit}
+                  >
+                    Generate
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={() => setShowCountPrompt(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Stats */}
 

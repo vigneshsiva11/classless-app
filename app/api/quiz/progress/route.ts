@@ -69,3 +69,55 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const {
+      student_id,
+      subject,
+      level,
+      score,
+      total_questions,
+      completion_time,
+      completed_at,
+      status,
+    } = body as Partial<QuizProgressItem>;
+
+    if (
+      typeof student_id !== "number" ||
+      !subject ||
+      !level ||
+      typeof score !== "number" ||
+      typeof total_questions !== "number"
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Missing or invalid required fields" },
+        { status: 400 }
+      );
+    }
+
+    const item: QuizProgressItem = {
+      id: Date.now(),
+      student_id,
+      subject,
+      level,
+      score,
+      total_questions,
+      completion_time:
+        typeof completion_time === "number" ? completion_time : 0,
+      completed_at: completed_at || new Date().toISOString(),
+      status: (status as any) || "completed",
+    };
+
+    mockProgress.push(item);
+
+    return NextResponse.json({ success: true, item });
+  } catch (error) {
+    console.error("Error saving quiz progress:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

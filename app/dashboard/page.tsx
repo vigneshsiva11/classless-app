@@ -45,6 +45,7 @@ export default function DashboardPage() {
 
     // Fetch user's questions
     fetchUserQuestions(parsedUser.id);
+    // Progress view moved to separate page
   }, [router]);
 
   const fetchUserQuestions = async (userId: number) => {
@@ -128,6 +129,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* My Quiz Progress button removed; added as tile in Quick Actions below */}
+
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Link href="/ask">
@@ -176,6 +179,24 @@ export default function DashboardPage() {
                 <CardContent>
                   <CardDescription>
                     Help students by answering their questions
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+
+          {user.user_type === "student" && (
+            <Link href="/quiz/progress">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-5 w-5 text-indigo-600" />
+                    <CardTitle className="text-lg">My Quiz Progress</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    View your attended quizzes, scores, and history
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -236,23 +257,7 @@ export default function DashboardPage() {
             </Link>
           )}
 
-          {user.user_type === "student" && (
-            <Link href="/quiz/progress">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center space-x-2">
-                    <Brain className="h-5 w-5 text-indigo-600" />
-                    <CardTitle className="text-lg">My Quiz Progress</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    View your quiz performance and progress over time
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+          {/* Removed separate My Quiz Progress tile to keep progress inside dashboard */}
 
           <Link href="/career-guidance">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
