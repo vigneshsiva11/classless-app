@@ -37,6 +37,7 @@ function QuizInterfaceContent() {
     averageScore: 0,
     totalTimeSpent: 0,
   });
+  const [attendanceId, setAttendanceId] = useState<number | null>(null);
 
   const subject = searchParams.get("subject");
   const level = searchParams.get("level");
@@ -49,10 +50,77 @@ function QuizInterfaceContent() {
     }
   }, [subject, level, count, concept]);
 
+  const trackQuizAttendance = async () => {
+    try {
+      const raw =
+        typeof window !== "undefined"
+          ? localStorage.getItem("classless_user")
+          : null;
+      const u = raw ? JSON.parse(raw) : null;
+      if (u && u.id) {
+        console.log(
+          "[Quiz Interface] Tracking attendance for student:",
+          u.id,
+          "Subject:",
+          subject,
+          "Level:",
+          level
+        );
+
+        const response = await fetch("/api/quiz/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "start",
+            student_id: u.id,
+            subject:
+              subject === "general"
+                ? concept || "general"
+                : subject || "general",
+            level: level || "beginner",
+            quiz_id: `${subject}-${level}-${Date.now()}`,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log("[Quiz Interface] Attendance tracking response:", result);
+          if (result.success && result.attendance) {
+            setAttendanceId(result.attendance.id);
+            console.log(
+              "[Quiz Interface] Attendance ID set:",
+              result.attendance.id
+            );
+          }
+        } else {
+          console.error(
+            "[Quiz Interface] Attendance tracking failed:",
+            response.status,
+            response.statusText
+          );
+        }
+      } else {
+        console.error("[Quiz Interface] No user found in localStorage");
+      }
+    } catch (error) {
+      console.error("Error tracking quiz attendance:", error);
+    }
+  };
+
   const generateQuizQuestions = async () => {
     setIsLoading(true);
 
     try {
+      // Check if user is logged in first
+      const raw =
+        typeof window !== "undefined"
+          ? localStorage.getItem("classless_user")
+          : null;
+      console.log("[Quiz Interface] Raw user data from localStorage:", raw);
+
+      // Track attendance when quiz starts
+      await trackQuizAttendance();
+
       // Call the AI quiz generation API
       const response = await fetch("/api/ai/generate-quiz", {
         method: "POST",
@@ -547,7 +615,7 @@ function QuizInterfaceContent() {
       totalTimeSpent: prev.totalTimeSpent + timeSpent,
     }));
 
-    // Persist progress for the current user (best-effort)
+    // Update attendance record with completion details
     try {
       const raw =
         typeof window !== "undefined"
@@ -555,10 +623,20 @@ function QuizInterfaceContent() {
           : null;
       const u = raw ? JSON.parse(raw) : null;
       if (u && u.id) {
+        console.log(
+          "[Quiz Interface] Completing quiz for student:",
+          u.id,
+          "Score:",
+          correctAnswers,
+          "Total:",
+          questions.length
+        );
+
         fetch("/api/quiz/progress", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            action: "complete",
             student_id: u.id,
             subject:
               subject === "general"
@@ -571,9 +649,18 @@ function QuizInterfaceContent() {
             completed_at: new Date().toISOString(),
             status: "completed",
           }),
-        }).catch(() => {});
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            console.log("[Quiz Interface] Quiz completion response:", result);
+          })
+          .catch((error) => {
+            console.error("[Quiz Interface] Quiz completion error:", error);
+          });
       }
-    } catch {}
+    } catch (error) {
+      console.error("[Quiz Interface] Error in completion tracking:", error);
+    }
 
     setQuizState("results");
   };

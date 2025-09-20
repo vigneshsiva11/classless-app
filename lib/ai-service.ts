@@ -1,6 +1,10 @@
 // AI Service for Classless - Now using Google Gemini AI
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Question } from "./types";
+import {
+  imageGenerationService,
+  ImageGenerationService,
+} from "./image-generation-service";
 
 export interface AIResponse {
   answer: string;
@@ -9,6 +13,11 @@ export interface AIResponse {
   sources?: string[];
   followUpQuestions?: string[];
   needsHumanReview: boolean;
+  generatedImage?: {
+    data: string;
+    mimeType: string;
+  };
+  isImageGeneration?: boolean;
 }
 
 export class AIService {
@@ -39,6 +48,14 @@ export class AIService {
   async processQuestion(question: Question): Promise<AIResponse> {
     console.log("[AI Service] Processing question:", question.question_text);
     console.log("[AI Service] Mock mode:", this.isMockMode);
+
+    // Check if this is an image generation request
+    if (
+      ImageGenerationService.isImageGenerationRequest(question.question_text)
+    ) {
+      console.log("[AI Service] Detected image generation request");
+      return await this.handleImageGenerationRequest(question);
+    }
 
     // If in mock mode, return mock responses
     if (this.isMockMode) {
@@ -633,6 +650,101 @@ To get real AI responses, please configure your API keys in the .env.local file.
       aiResponse.needsHumanReview ||
       question.question_type === "image" // Complex image questions
     );
+  }
+
+  // Handle image generation requests
+  private async handleImageGenerationRequest(
+    question: Question
+  ): Promise<AIResponse> {
+    try {
+      const imagePrompt = ImageGenerationService.extractImagePrompt(
+        question.question_text
+      );
+
+      console.log("[AI Service] Extracted image prompt:", imagePrompt);
+
+      const imageResponse = await imageGenerationService.generateImage({
+        prompt: imagePrompt,
+        style: "realistic", // Default style, could be made configurable
+        size: "1024x1024",
+      });
+
+      if (imageResponse.success && imageResponse.image) {
+        const responseLanguage =
+          (question as any).response_language || question.language || "en";
+
+        return {
+          answer: `I've generated an image for you: "${imagePrompt}". The image has been created and is displayed below.`,
+          confidence: 0.9,
+          language: responseLanguage,
+          sources: ["Google Gemini AI - Image Generation"],
+          followUpQuestions: [
+            "Would you like me to generate another image?",
+            "Would you like to modify this image in any way?",
+          ],
+          needsHumanReview: false,
+          generatedImage: imageResponse.image,
+          isImageGeneration: true,
+        };
+      } else {
+        // Fallback to text response if image generation fails
+        const responseLanguage =
+          (question as any).response_language || question.language || "en";
+
+        // Check if it's a rate limit error
+        const isRateLimit =
+          imageResponse.error && imageResponse.error.includes("Rate limit");
+
+        let answer = `I understand you'd like me to generate an image of "${imagePrompt}", but I'm having trouble creating it right now.`;
+
+        if (isRateLimit) {
+          answer += `\n\n🚨 **Rate Limit Exceeded**: You've hit the Gemini API rate limits. Here are your options:\n\n`;
+          answer += `• **Wait**: Try again in a few hours (limits reset daily)\n`;
+          answer += `• **Upgrade**: Consider upgrading your Gemini API plan for higher limits\n`;
+          answer += `• **Alternative**: I can describe what the image would look like instead\n\n`;
+          answer += `For now, let me describe what a "${imagePrompt}" would look like:`;
+        } else {
+          answer += ` ${imageResponse.error || "Please try again later."}`;
+        }
+
+        return {
+          answer: answer,
+          confidence: 0.5,
+          language: responseLanguage,
+          sources: ["AI Service"],
+          followUpQuestions: [
+            "Would you like me to describe what the image would look like instead?",
+            "Would you like to try a different image request?",
+            isRateLimit
+              ? "How can I upgrade my API plan?"
+              : "Would you like to try again later?",
+          ],
+          needsHumanReview: true,
+          isImageGeneration: true,
+        };
+      }
+    } catch (error: any) {
+      console.error(
+        "[AI Service] Error handling image generation request:",
+        error
+      );
+
+      const responseLanguage =
+        (question as any).response_language || question.language || "en";
+      return {
+        answer:
+          "I encountered an error while trying to generate the image. Please try again or contact support if the issue persists.",
+        confidence: 0.3,
+        language: responseLanguage,
+        sources: ["AI Service - Error"],
+        followUpQuestions: [
+          "Would you like me to describe what the image would look like instead?",
+          "Would you like to try a different request?",
+        ],
+        needsHumanReview: true,
+        isImageGeneration: true,
+      };
+    }
   }
 }
 

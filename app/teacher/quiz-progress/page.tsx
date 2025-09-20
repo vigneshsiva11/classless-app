@@ -26,24 +26,18 @@ import {
   XCircle,
   Brain,
 } from "lucide-react";
-import type { User } from "@/lib/types";
+import type { User, QuizAttendance } from "@/lib/types";
+import { getQuizAttendanceByStudent, getAllUsers } from "@/lib/database";
 
-interface QuizProgress {
-  id: number;
-  student_id: number;
+interface QuizProgressWithStudent extends QuizAttendance {
   student_name: string;
-  quiz_subject: string;
-  quiz_level: string;
-  score: number;
-  total_questions: number;
-  completion_time: number;
-  completed_at: string;
-  status: "completed" | "in_progress" | "abandoned";
 }
 
 export default function TeacherQuizProgressPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [quizProgress, setQuizProgress] = useState<QuizProgress[]>([]);
+  const [quizProgress, setQuizProgress] = useState<QuizProgressWithStudent[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
@@ -86,71 +80,29 @@ export default function TeacherQuizProgressPage() {
 
   const fetchQuizProgress = async () => {
     try {
-      // Mock data for demonstration - replace with actual API call
-      const mockProgress: QuizProgress[] = [
-        {
-          id: 1,
-          student_id: 101,
-          student_name: "Alice Johnson",
-          quiz_subject: "math",
-          quiz_level: "beginner",
-          score: 8,
-          total_questions: 10,
-          completion_time: 450,
-          completed_at: "2024-01-15T10:30:00Z",
-          status: "completed",
-        },
-        {
-          id: 2,
-          student_id: 102,
-          student_name: "Bob Smith",
-          quiz_subject: "science",
-          quiz_level: "intermediate",
-          score: 6,
-          total_questions: 8,
-          completion_time: 320,
-          completed_at: "2024-01-15T11:15:00Z",
-          status: "completed",
-        },
-        {
-          id: 3,
-          student_id: 103,
-          student_name: "Carol Davis",
-          quiz_subject: "math",
-          quiz_level: "advanced",
-          score: 0,
-          total_questions: 12,
-          completion_time: 0,
-          completed_at: "2024-01-15T12:00:00Z",
-          status: "in_progress",
-        },
-        {
-          id: 4,
-          student_id: 104,
-          student_name: "David Wilson",
-          quiz_subject: "english",
-          quiz_level: "beginner",
-          score: 7,
-          total_questions: 10,
-          completion_time: 280,
-          completed_at: "2024-01-14T14:20:00Z",
-          status: "completed",
-        },
-        {
-          id: 5,
-          student_id: 105,
-          student_name: "Eva Brown",
-          quiz_subject: "history",
-          quiz_level: "intermediate",
-          score: 0,
-          total_questions: 15,
-          completion_time: 0,
-          completed_at: "2024-01-14T16:45:00Z",
-          status: "abandoned",
-        },
-      ];
+      // Get all users to map student names
+      const allUsers = await getAllUsers();
+      const students = allUsers.filter((user) => user.user_type === "student");
 
-      setQuizProgress(mockProgress);
+      // Get all quiz attendance records
+      const allAttendance: QuizProgressWithStudent[] = [];
+
+      for (const student of students) {
+        const attendance = await getQuizAttendanceByStudent(student.id);
+        const attendanceWithNames = attendance.map((att) => ({
+          ...att,
+          student_name: student.name,
+        }));
+        allAttendance.push(...attendanceWithNames);
+      }
+
+      // Sort by most recent first
+      allAttendance.sort(
+        (a, b) =>
+          new Date(b.attended_at).getTime() - new Date(a.attended_at).getTime()
+      );
+
+      setQuizProgress(allAttendance);
     } catch (error) {
       console.error("Error fetching quiz progress:", error);
     } finally {
@@ -160,9 +112,9 @@ export default function TeacherQuizProgressPage() {
 
   const filteredProgress = quizProgress.filter((progress) => {
     const subjectMatch =
-      selectedSubject === "all" || progress.quiz_subject === selectedSubject;
+      selectedSubject === "all" || progress.subject === selectedSubject;
     const levelMatch =
-      selectedLevel === "all" || progress.quiz_level === selectedLevel;
+      selectedLevel === "all" || progress.level === selectedLevel;
     return subjectMatch && levelMatch;
   });
 
@@ -177,8 +129,8 @@ export default function TeacherQuizProgressPage() {
     switch (status) {
       case "completed":
         return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
-      case "in_progress":
-        return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>;
+      case "attended":
+        return <Badge className="bg-blue-100 text-blue-800">Attended</Badge>;
       case "abandoned":
         return <Badge className="bg-red-100 text-red-800">Abandoned</Badge>;
       default:
@@ -427,7 +379,7 @@ export default function TeacherQuizProgressPage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         <div className="text-2xl">
-                          {getSubjectIcon(progress.quiz_subject)}
+                          {getSubjectIcon(progress.subject)}
                         </div>
                         <div>
                           <h4 className="font-semibold text-gray-900">
@@ -435,12 +387,10 @@ export default function TeacherQuizProgressPage() {
                           </h4>
                           <div className="flex items-center space-x-2 text-sm text-gray-600">
                             <span className="capitalize">
-                              {progress.quiz_subject}
+                              {progress.subject}
                             </span>
                             <span>•</span>
-                            <span className="capitalize">
-                              {progress.quiz_level}
-                            </span>
+                            <span className="capitalize">{progress.level}</span>
                           </div>
                         </div>
                       </div>
@@ -449,59 +399,75 @@ export default function TeacherQuizProgressPage() {
                         <div className="text-right">
                           <div
                             className={`text-lg font-bold ${getScoreColor(
-                              progress.score,
-                              progress.total_questions
+                              progress.score || 0,
+                              progress.total_questions || 1
                             )}`}
                           >
-                            {progress.status === "completed"
+                            {progress.status === "completed" &&
+                            progress.score !== undefined
                               ? `${progress.score}/${progress.total_questions}`
-                              : progress.status === "in_progress"
-                              ? "In Progress"
-                              : "Abandoned"}
+                              : progress.status === "attended"
+                              ? "Attended"
+                              : progress.status === "abandoned"
+                              ? "Abandoned"
+                              : "In Progress"}
                           </div>
-                          {progress.status === "completed" && (
-                            <div className="text-sm text-gray-500">
-                              {Math.round(
-                                (progress.score / progress.total_questions) *
-                                  100
-                              )}
-                              %
-                            </div>
-                          )}
+                          {progress.status === "completed" &&
+                            progress.score !== undefined && (
+                              <div className="text-sm text-gray-500">
+                                {Math.round(
+                                  ((progress.score || 0) /
+                                    (progress.total_questions || 1)) *
+                                    100
+                                )}
+                                %
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
 
-                    {progress.status === "completed" && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>Score Progress</span>
-                          <span>
-                            {Math.round(
-                              (progress.score / progress.total_questions) * 100
-                            )}
-                            %
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            (progress.score / progress.total_questions) * 100
-                          }
-                          className="h-2"
-                        />
-                        <div className="flex justify-between text-sm text-gray-500">
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatTime(progress.completion_time)}</span>
+                    {progress.status === "completed" &&
+                      progress.score !== undefined && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Score Progress</span>
+                            <span>
+                              {Math.round(
+                                ((progress.score || 0) /
+                                  (progress.total_questions || 1)) *
+                                  100
+                              )}
+                              %
+                            </span>
                           </div>
-                          <span>
-                            {new Date(
-                              progress.completed_at
-                            ).toLocaleDateString()}
-                          </span>
+                          <Progress
+                            value={
+                              ((progress.score || 0) /
+                                (progress.total_questions || 1)) *
+                              100
+                            }
+                            className="h-2"
+                          />
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {formatTime(progress.completion_time || 0)}
+                              </span>
+                            </div>
+                            <span>
+                              {progress.completed_at
+                                ? new Date(
+                                    progress.completed_at
+                                  ).toLocaleDateString()
+                                : new Date(
+                                    progress.attended_at
+                                  ).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {progress.status === "in_progress" && (
                       <div className="bg-blue-50 p-3 rounded-lg">
@@ -530,4 +496,3 @@ export default function TeacherQuizProgressPage() {
     </div>
   );
 }
-

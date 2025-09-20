@@ -202,6 +202,41 @@ function keywordOverlapScore(query: string, doc: string): number {
   return hits / qToks.length; // 0..1
 }
 
+// Enhanced hybrid search combining BM25-style keyword search with vector similarity
+function hybridSearch(
+  query: string,
+  corpus: DocChunk[],
+  queryEmbedding: number[],
+  topK: number = 5
+): Array<{
+  chunk: DocChunk;
+  score: number;
+  confidence: "high" | "medium" | "low";
+}> {
+  const results = corpus.map((chunk) => {
+    // Vector similarity score (0-1)
+    const vectorScore = chunk.embedding
+      ? cosineSimilarity(chunk.embedding, queryEmbedding)
+      : 0;
+
+    // BM25-style keyword score (0-1)
+    const keywordScore = keywordOverlapScore(query, chunk.text);
+
+    // Weighted combination: 70% vector, 30% keyword
+    const hybridScore = vectorScore * 0.7 + keywordScore * 0.3;
+
+    // Determine confidence level
+    let confidence: "high" | "medium" | "low";
+    if (hybridScore >= 0.7) confidence = "high";
+    else if (hybridScore >= 0.4) confidence = "medium";
+    else confidence = "low";
+
+    return { chunk, score: hybridScore, confidence };
+  });
+
+  return results.sort((a, b) => b.score - a.score).slice(0, topK);
+}
+
 function answerSuggestedForGrade(
   grade: number | undefined,
   question: string
@@ -313,6 +348,48 @@ function answerSuggestedForGrade(
       break;
   }
   return null;
+}
+
+// Query expansion/rephrasing function
+async function expandQuery(
+  question: string,
+  grade?: number,
+  genAI?: any
+): Promise<string[]> {
+  if (!genAI) return [question];
+
+  try {
+    const gradeText = grade ? `Class ${grade}` : "appropriate grade level";
+    const expansionPrompt = `You are an AI tutor. Given a student question, generate 2-3 expanded/rephrased versions that would help find better educational content.
+
+Original question: "${question}"
+Grade level: ${gradeText}
+
+Generate variations that:
+1. Use more specific educational terminology
+2. Include related concepts from the same topic
+3. Add context about the grade level
+4. Use synonyms and alternative phrasings
+
+Return only the expanded questions, one per line, without numbering or explanations.`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const completion = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: expansionPrompt }] }],
+    });
+
+    const response = completion.response.text();
+    const expansions = response
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.match(/^\d+\./))
+      .slice(0, 3);
+
+    return [question, ...expansions];
+  } catch (error) {
+    console.error("[RAG] Query expansion failed:", error);
+    return [question];
+  }
 }
 
 function answerGeneralTopic(question: string, grade?: number): string | null {
@@ -465,117 +542,102 @@ export async function POST(request: NextRequest) {
     const effectiveGrade = typeof grade === "number" ? grade : undefined;
     const mappedGrade = mapToAvailableGrade(effectiveGrade);
 
+    // Step 1: Query expansion for better retrieval
+    const expandedQueries = await expandQuery(question, effectiveGrade, genAI);
+    console.log("[RAG] Expanded queries:", expandedQueries);
+
     if (pcApiKey && pcIndexName) {
       try {
         const pc = new Pinecone({ apiKey: pcApiKey });
         const index = pc.index(pcIndexName);
-        const q = await embeddingModel.embedContent(question);
-        const qEmbedding = q.embedding.values as unknown as number[];
-        const res = await index.query({
-          vector: qEmbedding,
-          topK: 5,
-          includeMetadata: true,
-          filter: mappedGrade ? { grade: { $eq: mappedGrade } } : undefined,
-        });
-        const contexts: string[] = [];
-        res.matches?.forEach((m: any) => {
-          const meta = m?.metadata || {};
-          const metaGrade =
-            typeof meta.grade === "string" ? parseInt(meta.grade) : meta.grade;
-          if (mappedGrade && metaGrade !== mappedGrade) {
-            return;
+
+        // Try each expanded query and collect results
+        const allResults: any[] = [];
+        for (const expandedQuery of expandedQueries) {
+          const q = await embeddingModel.embedContent(expandedQuery);
+          const qEmbedding = q.embedding.values as unknown as number[];
+          const res = await index.query({
+            vector: qEmbedding,
+            topK: 3, // Reduced per query since we're doing multiple
+            includeMetadata: true,
+            filter: mappedGrade ? { grade: { $eq: mappedGrade } } : undefined,
+          });
+          if (res.matches) allResults.push(...res.matches);
+        }
+
+        // Deduplicate and rank results
+        const uniqueResults = new Map();
+        allResults.forEach((m: any) => {
+          const id = m.id || m.metadata?.id;
+          if (!uniqueResults.has(id) || m.score > uniqueResults.get(id).score) {
+            uniqueResults.set(id, m);
           }
-          const text = meta.text || meta.content || "";
-          if (text) contexts.push(text);
         });
+
+        const contexts: string[] = [];
+        Array.from(uniqueResults.values())
+          .sort((a: any, b: any) => b.score - a.score)
+          .slice(0, 5)
+          .forEach((m: any) => {
+            const meta = m?.metadata || {};
+            const metaGrade =
+              typeof meta.grade === "string"
+                ? parseInt(meta.grade)
+                : meta.grade;
+            if (mappedGrade && metaGrade !== mappedGrade) return;
+            const text = meta.text || meta.content || "";
+            if (text) contexts.push(text);
+          });
+
         retrieved = contexts.join("\n\n");
-        // If Pinecone returns no context, fall back to in-memory filtered by grade
+
+        // If Pinecone returns no context, fall back to in-memory with hybrid search
         if (!retrieved) {
           await ensureEmbeddings(embeddingModel);
-          const q2 = await embeddingModel.embedContent(question);
-          const qEmbedding2 = q2.embedding.values as unknown as number[];
           const baseCorpus = mappedGrade
             ? corpus.filter((c) => c.metadata?.grade === mappedGrade)
             : corpus;
-          ranked = baseCorpus
-            .map((c) => ({
-              chunk: c,
-              score: cosineSimilarity(c.embedding!, qEmbedding2),
-            }))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 4);
+
+          // Use hybrid search with the original question
+          const q2 = await embeddingModel.embedContent(question);
+          const qEmbedding2 = q2.embedding.values as unknown as number[];
+          const hybridResults = hybridSearch(
+            question,
+            baseCorpus,
+            qEmbedding2,
+            4
+          );
+          ranked = hybridResults.map((r) => ({
+            chunk: r.chunk,
+            score: r.score,
+          }));
           retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
-          // Keyword fallback if still empty
-          if (!retrieved) {
-            const questionLower2 = question.toLowerCase();
-            const matchingChunks2 = baseCorpus.filter((c) => {
-              const textLower = c.text.toLowerCase();
-              return questionLower2
-                .split(/\s+/)
-                .some(
-                  (word: string) => word.length > 3 && textLower.includes(word)
-                );
-            });
-            if (matchingChunks2.length > 0) {
-              retrieved = matchingChunks2
-                .slice(0, 3)
-                .map((c) => c.text)
-                .join("\n\n");
-            }
-          }
         }
       } catch (e) {
-        // Fallback to in-memory
+        // Fallback to in-memory hybrid search
         await ensureEmbeddings(embeddingModel);
-        const q = await embeddingModel.embedContent(question);
-        const qEmbedding = q.embedding.values as unknown as number[];
         const baseCorpus = mappedGrade
           ? corpus.filter((c) => c.metadata?.grade === mappedGrade)
           : corpus;
-        ranked = baseCorpus
-          .map((c) => ({
-            chunk: c,
-            score: cosineSimilarity(c.embedding!, qEmbedding),
-          }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 4);
+
+        const q = await embeddingModel.embedContent(question);
+        const qEmbedding = q.embedding.values as unknown as number[];
+        const hybridResults = hybridSearch(question, baseCorpus, qEmbedding, 4);
+        ranked = hybridResults.map((r) => ({ chunk: r.chunk, score: r.score }));
         retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
-        // If nothing matched after grade filtering, attempt keyword fallback
-        if (!retrieved) {
-          const questionLower2 = question.toLowerCase();
-          const matchingChunks2 = baseCorpus.filter((c) => {
-            const textLower = c.text.toLowerCase();
-            const hasKeyword = questionLower2
-              .split(/\s+/)
-              .some(
-                (word: string) => word.length > 3 && textLower.includes(word)
-              );
-            return hasKeyword;
-          });
-          if (matchingChunks2.length > 0) {
-            retrieved = matchingChunks2
-              .slice(0, 3)
-              .map((c) => c.text)
-              .join("\n\n");
-          }
-        }
       }
     } else {
-      // In-memory with fallback for invalid API key
+      // In-memory with hybrid search
       try {
         await ensureEmbeddings(embeddingModel);
-        const q = await embeddingModel.embedContent(question);
-        const qEmbedding = q.embedding.values as unknown as number[];
         const baseCorpus = mappedGrade
           ? corpus.filter((c) => c.metadata?.grade === mappedGrade)
           : corpus;
-        ranked = baseCorpus
-          .map((c) => ({
-            chunk: c,
-            score: cosineSimilarity(c.embedding!, qEmbedding),
-          }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 4);
+
+        const q = await embeddingModel.embedContent(question);
+        const qEmbedding = q.embedding.values as unknown as number[];
+        const hybridResults = hybridSearch(question, baseCorpus, qEmbedding, 4);
+        ranked = hybridResults.map((r) => ({ chunk: r.chunk, score: r.score }));
         retrieved = ranked.map((r) => r.chunk.text).join("\n\n");
       } catch (error) {
         console.error(
@@ -696,11 +758,49 @@ export async function POST(request: NextRequest) {
       return sentences || "I don't know because it is out of syllabus.";
     })();
 
-    // Build prompt (cap context to ~2k chars for speed)
+    // Determine confidence level from search results
+    const avgScore =
+      ranked.length > 0
+        ? ranked.reduce((sum, r) => sum + r.score, 0) / ranked.length
+        : 0;
+    const maxScore =
+      ranked.length > 0 ? Math.max(...ranked.map((r) => r.score)) : 0;
+    const confidence =
+      maxScore >= 0.7 ? "high" : maxScore >= 0.4 ? "medium" : "low";
+
+    // Build confidence-aware prompt with few-shot examples
     const gradeText = grade ? `Class ${grade}` : "the appropriate class level";
-    const prompt = `You are an AI tutor for ${gradeText} students.\nUse only the following context to answer the question.\nIf the answer is not in the context, and the topic is generally part of standard school curricula (e.g., computer generations, basic science/math), provide a brief high-level answer suitable for ${gradeText}. Otherwise say "I don't know because it is out of syllabus."\nRespond concisely in language code: ${answerLang}.\n\nContext:\n${trimmedContext}\n\nQuestion (lang=${
-      language || "en"
-    }):\n${question}\n\nAnswer:`;
+
+    const fewShotExamples = `
+Examples of how to respond based on confidence:
+
+Q: What is the difference between speed and velocity?
+A: [High confidence - direct answer from context] Speed is how fast an object moves (distance/time). Velocity is speed with direction (displacement/time).
+
+Q: Who invented the telephone? (not in syllabus)
+A: [Low confidence - related info] This isn't directly in the syllabus, but related to communication technology: The telephone was invented by Alexander Graham Bell in 1876, which revolutionized long-distance communication.
+
+Q: Tell me about light refraction in daily life
+A: [Medium confidence - partial answer] I couldn't find an exact match, but here's something related: Light refraction occurs when light bends as it passes from one medium to another, like when a pencil appears bent in water or when we see rainbows.
+`;
+
+    const prompt = `You are an AI tutor for ${gradeText} students.${fewShotExamples}
+
+Context confidence level: ${confidence}
+Use the following context to answer the question.
+
+Context:\n${trimmedContext}
+
+Question (lang=${language || "en"}):\n${question}
+
+Based on the confidence level:
+- HIGH confidence: Give a complete, confident answer from the context
+- MEDIUM confidence: Give a partial/related answer with a note like "I couldn't find an exact match, but here's something related:"
+- LOW confidence: If the topic is generally part of standard school curricula, provide a brief high-level answer suitable for ${gradeText}. Otherwise say "I don't know because it is out of syllabus."
+
+Respond concisely in language code: ${answerLang}.
+
+Answer:`;
 
     // Try fast model with small fallback and brief backoff to handle 503s
     const models = [

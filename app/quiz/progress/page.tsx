@@ -14,22 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, BarChart3, BookOpen } from "lucide-react";
-import type { User } from "@/lib/types";
-
-interface MyQuizProgressItem {
-  id: number;
-  subject: string;
-  level: string;
-  score: number;
-  total_questions: number;
-  completion_time: number;
-  completed_at: string;
-  status: "completed" | "in_progress" | "abandoned";
-}
+import type { User, QuizAttendance } from "@/lib/types";
 
 export default function MyQuizProgressPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [items, setItems] = useState<MyQuizProgressItem[]>([]);
+  const [items, setItems] = useState<QuizAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -50,12 +39,16 @@ export default function MyQuizProgressPage() {
 
   const fetchMyProgress = async (studentId: number) => {
     try {
-      // Placeholder: replace with real API when available
+      console.log(
+        "[Quiz Progress Page] Fetching progress for student:",
+        studentId
+      );
       const response = await fetch(
         `/api/quiz/progress?student_id=${studentId}`
       );
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
+      console.log("[Quiz Progress Page] Received data:", data);
       setItems(data.progress || []);
     } catch (error) {
       console.error("Failed to fetch quiz progress:", error);
@@ -98,7 +91,7 @@ export default function MyQuizProgressPage() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                Welcome, {user.name}
+                Welcome, {user.name} (ID: {user.id})
               </span>
             </div>
           </div>
@@ -116,14 +109,15 @@ export default function MyQuizProgressPage() {
           <CardContent>
             {items.length === 0 ? (
               <div className="text-center py-8 text-gray-600">
-                No quiz attempts yet.
+                No attended quizzes yet. Start a quiz to see your progress here.
               </div>
             ) : (
               <div className="space-y-4">
                 {items.map((item) => {
-                  const pct = Math.round(
-                    (item.score / item.total_questions) * 100
-                  );
+                  const pct =
+                    item.score && item.total_questions
+                      ? Math.round((item.score / item.total_questions) * 100)
+                      : 0;
                   return (
                     <div key={item.id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -134,14 +128,32 @@ export default function MyQuizProgressPage() {
                         <Badge>{item.status}</Badge>
                       </div>
                       <div className="mb-2 text-sm text-gray-600">
-                        Completed on{" "}
-                        {new Date(item.completed_at).toLocaleString()} •{" "}
-                        {item.completion_time}s
+                        {item.completed_at ? (
+                          <>
+                            Completed on{" "}
+                            {new Date(item.completed_at).toLocaleString()} •{" "}
+                            {item.completion_time || 0}s
+                          </>
+                        ) : (
+                          <>
+                            Attended on{" "}
+                            {new Date(item.attended_at).toLocaleString()}
+                          </>
+                        )}
                       </div>
-                      <Progress value={pct} className="h-2" />
-                      <div className="mt-2 text-sm text-gray-700">
-                        Score: {item.score} / {item.total_questions} ({pct}%)
-                      </div>
+                      {item.score !== undefined && item.total_questions ? (
+                        <>
+                          <Progress value={pct} className="h-2" />
+                          <div className="mt-2 text-sm text-gray-700">
+                            Score: {item.score} / {item.total_questions} ({pct}
+                            %)
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-500">
+                          Quiz not completed
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -150,10 +162,49 @@ export default function MyQuizProgressPage() {
           </CardContent>
         </Card>
 
-        <div className="text-center">
-          <Link href="/quiz/interface">
+        <div className="text-center space-y-4">
+          <Link href="/quiz">
             <Button>Take a New Quiz</Button>
           </Link>
+
+          {/* Debug buttons */}
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const response = await fetch("/api/test-attendance");
+                  const data = await response.json();
+                  console.log("[Debug] Test attendance data:", data);
+                  alert(
+                    `Users: ${data.data?.totalUsers}, Attendance: ${data.data?.totalAttendance}`
+                  );
+                } catch (error) {
+                  console.error("[Debug] Test error:", error);
+                }
+              }}
+            >
+              Test Database
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const response = await fetch("/api/test-attendance", {
+                    method: "POST",
+                  });
+                  const data = await response.json();
+                  console.log("[Debug] Created test attendance:", data);
+                  alert("Test attendance created!");
+                } catch (error) {
+                  console.error("[Debug] Create test error:", error);
+                }
+              }}
+            >
+              Create Test Attendance
+            </Button>
+          </div>
         </div>
       </div>
     </div>
