@@ -1,5 +1,5 @@
 // Database utility functions for Classless AI Tutor
-// PostgreSQL implementation
+// PostgreSQL implementation with fallback to mock data
 
 import type {
   User,
@@ -33,7 +33,13 @@ import {
   getRecentQuestions as pgGetRecentQuestions,
 } from "./database-pg";
 
-// Mock data store (replace with actual database connection)
+// Import pool to check if PostgreSQL is available
+import { pool } from "./db-config";
+
+// Helper function to check if PostgreSQL is available
+const isPostgreSQLAvailable = () => pool !== null;
+
+// Mock data store (fallback when PostgreSQL is not available)
 const mockUsers: User[] = [];
 const mockQuestions: Question[] = [];
 const mockAnswers: Answer[] = [];
@@ -307,36 +313,85 @@ export const mockDatabase = {
 export async function createUser(
   userData: Omit<User, "id" | "created_at" | "updated_at">
 ): Promise<User> {
-  return await pgCreateUser(userData);
+  if (isPostgreSQLAvailable()) {
+    return await pgCreateUser(userData);
+  }
+
+  // Fallback to mock data
+  const newUser: User = {
+    ...userData,
+    id: mockUsers.length + 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockUsers.push(newUser);
+  return newUser;
 }
 
 export async function getUserByPhone(
   phone_number: string
 ): Promise<User | null> {
-  return await pgGetUserByPhone(phone_number);
+  if (isPostgreSQLAvailable()) {
+    return await pgGetUserByPhone(phone_number);
+  }
+
+  // Fallback to mock data
+  return mockUsers.find((user) => user.phone_number === phone_number) || null;
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  return await pgGetAllUsers();
+  if (isPostgreSQLAvailable()) {
+    return await pgGetAllUsers();
+  }
+
+  // Fallback to mock data
+  return mockUsers;
 }
 
 // Question operations
 export async function createQuestion(
   questionData: Omit<Question, "id" | "created_at" | "status">
 ): Promise<Question> {
-  return await pgCreateQuestion(questionData);
+  if (isPostgreSQLAvailable()) {
+    return await pgCreateQuestion(questionData);
+  }
+
+  // Fallback to mock data
+  const newQuestion: Question = {
+    ...questionData,
+    id: mockQuestions.length + 1,
+    status: "pending",
+    created_at: new Date().toISOString(),
+  };
+  mockQuestions.push(newQuestion);
+  return newQuestion;
 }
 
 export async function getQuestionById(id: number): Promise<Question | null> {
-  return await pgGetQuestionById(id);
+  if (isPostgreSQLAvailable()) {
+    return await pgGetQuestionById(id);
+  }
+
+  // Fallback to mock data
+  return mockQuestions.find((q) => q.id === id) || null;
 }
 
 export async function getQuestionsByUser(user_id: number): Promise<Question[]> {
-  return await pgGetQuestionsByUser(user_id);
+  if (isPostgreSQLAvailable()) {
+    return await pgGetQuestionsByUser(user_id);
+  }
+
+  // Fallback to mock data
+  return mockQuestions.filter((q) => q.user_id === user_id);
 }
 
 export async function getPendingQuestions(): Promise<Question[]> {
-  return await pgGetPendingQuestions();
+  if (isPostgreSQLAvailable()) {
+    return await pgGetPendingQuestions();
+  }
+
+  // Fallback to mock data
+  return mockQuestions.filter((q) => q.status === "pending");
 }
 
 // Answer operations
@@ -389,13 +444,28 @@ export async function getRecentQuestions(limit = 10): Promise<Question[]> {
 export async function createQuizAttendance(
   attendanceData: Omit<QuizAttendance, "id">
 ): Promise<QuizAttendance> {
-  return await pgCreateQuizAttendance(attendanceData);
+  if (isPostgreSQLAvailable()) {
+    return await pgCreateQuizAttendance(attendanceData);
+  }
+
+  // Fallback to mock data
+  const newAttendance: QuizAttendance = {
+    ...attendanceData,
+    id: mockQuizAttendance.length + 1,
+  };
+  mockQuizAttendance.push(newAttendance);
+  return newAttendance;
 }
 
 export async function getQuizAttendanceByStudent(
   student_id: number
 ): Promise<QuizAttendance[]> {
-  return await pgGetQuizAttendanceByStudent(student_id);
+  if (isPostgreSQLAvailable()) {
+    return await pgGetQuizAttendanceByStudent(student_id);
+  }
+
+  // Fallback to mock data
+  return mockQuizAttendance.filter((a) => a.student_id === student_id);
 }
 
 export async function updateQuizAttendance(
@@ -411,11 +481,26 @@ export async function updateQuizAttendance(
     >
   >
 ): Promise<QuizAttendance | null> {
-  return await pgUpdateQuizAttendance(id, updates);
+  if (isPostgreSQLAvailable()) {
+    return await pgUpdateQuizAttendance(id, updates);
+  }
+
+  // Fallback to mock data
+  const attendance = mockQuizAttendance.find((a) => a.id === id);
+  if (attendance) {
+    Object.assign(attendance, updates);
+    return attendance;
+  }
+  return null;
 }
 
 export async function getQuizAttendanceById(
   id: number
 ): Promise<QuizAttendance | null> {
-  return await pgGetQuizAttendanceById(id);
+  if (isPostgreSQLAvailable()) {
+    return await pgGetQuizAttendanceById(id);
+  }
+
+  // Fallback to mock data
+  return mockQuizAttendance.find((a) => a.id === id) || null;
 }

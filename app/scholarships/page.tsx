@@ -125,19 +125,29 @@ export default function ScholarshipsPage() {
 
   const fetchScholarships = async (useRealtime = false) => {
     try {
-      const url = useRealtime
-        ? "/api/scholarships?realtime=true"
-        : "/api/scholarships";
+      // Always fetch real-time scholarships (no fallback to mock data)
+      const url = "/api/scholarships";
       const response = await fetch(url);
       const data = await response.json();
+
       setScholarships(data.scholarships || []);
       setLastUpdated(data.lastUpdated || new Date().toISOString());
 
       if (data.source === "realtime") {
         setIsConnected(true);
+      } else if (data.source === "live") {
+        setIsConnected(false);
+      } else {
+        setIsConnected(false);
       }
+
+      // Log the source for debugging
+      console.log(
+        `[Scholarships Page] Fetched ${data.count} scholarships from ${data.source} source`
+      );
     } catch (error) {
-      console.error("Failed to fetch scholarships:", error);
+      console.error("Failed to fetch real-time scholarships:", error);
+      setScholarships([]);
       setIsConnected(false);
     } finally {
       setLoading(false);
@@ -319,7 +329,7 @@ export default function ScholarshipsPage() {
           <div className="flex items-center gap-3">
             <GraduationCap className="h-8 w-8 text-blue-600" />
             <h1 className="text-3xl font-bold text-gray-900">
-              Scholarships & Government Schemes
+              Real-Time Scholarships & Government Schemes
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -347,29 +357,26 @@ export default function ScholarshipsPage() {
                 <WifiOff className="h-4 w-4 text-gray-400" />
               )}
               <span className="text-sm text-gray-600">
-                {isConnected ? "Live" : "Offline"}
+                {isConnected ? "Live Data" : "Cached Data"}
               </span>
             </div>
           </div>
         </div>
         <p className="text-gray-600 text-lg">
-          Discover financial aid opportunities to support your education journey
+          Discover live, real-time financial aid opportunities from government
+          and private sources
         </p>
 
-        {/* Real-time Controls */}
+        {/* Real-time Status */}
         <Card className="mt-4">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <Switch
-                    id="realtime"
-                    checked={realtimeEnabled}
-                    onCheckedChange={toggleRealtime}
-                  />
-                  <label htmlFor="realtime" className="text-sm font-medium">
-                    Real-time Updates
-                  </label>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-green-700">
+                    Real-time Data Only
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
@@ -389,6 +396,10 @@ export default function ScholarshipsPage() {
                   ? new Date(lastUpdated).toLocaleTimeString()
                   : "Never"}
               </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Showing only live, real-time scholarship data from government and
+              private sources. No mock or sample data is displayed.
             </div>
           </CardContent>
         </Card>
@@ -637,12 +648,36 @@ export default function ScholarshipsPage() {
         <div className="text-center py-12">
           <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-medium text-gray-900 mb-2">
-            No scholarships found
+            No real-time scholarships available
           </h3>
-          <p className="text-gray-600">
-            Try adjusting your filters or search terms to find relevant
-            opportunities.
+          <p className="text-gray-600 mb-4">
+            We're currently showing only live, real-time scholarship data. No
+            active scholarships were found matching your criteria.
           </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              variant="outline"
+              onClick={refreshData}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh Data
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm("");
+                setCategoryFilter("All Categories");
+                setStateFilter("All States");
+                setGradeFilter("All Grades");
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
         </div>
       )}
     </div>

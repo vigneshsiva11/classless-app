@@ -20,6 +20,7 @@ export default function MyQuizProgressPage() {
   const [user, setUser] = useState<User | null>(null);
   const [items, setItems] = useState<QuizAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -162,49 +163,10 @@ export default function MyQuizProgressPage() {
           </CardContent>
         </Card>
 
-        <div className="text-center space-y-4">
+        <div className="text-center">
           <Link href="/quiz">
             <Button>Take a New Quiz</Button>
           </Link>
-
-          {/* Debug buttons */}
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const response = await fetch("/api/test-attendance");
-                  const data = await response.json();
-                  console.log("[Debug] Test attendance data:", data);
-                  alert(
-                    `Users: ${data.data?.totalUsers}, Attendance: ${data.data?.totalAttendance}`
-                  );
-                } catch (error) {
-                  console.error("[Debug] Test error:", error);
-                }
-              }}
-            >
-              Test Database
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const response = await fetch("/api/test-attendance", {
-                    method: "POST",
-                  });
-                  const data = await response.json();
-                  console.log("[Debug] Created test attendance:", data);
-                  alert("Test attendance created!");
-                } catch (error) {
-                  console.error("[Debug] Create test error:", error);
-                }
-              }}
-            >
-              Create Test Attendance
-            </Button>
-          </div>
         </div>
       </div>
     </div>

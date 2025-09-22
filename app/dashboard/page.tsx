@@ -53,13 +53,34 @@ export default function DashboardPage() {
       const response = await fetch(`/api/questions?user_id=${userId}`);
       const result = await response.json();
       if (result.success) {
-        setQuestions(result.data);
+        // Show only AI asked questions on dashboard: heuristic - exclude those the user flagged as teacher-directed
+        const teacherIdsKey = `classless_teacher_questions_${userId}`;
+        let teacherIds: number[] = [];
+        try {
+          const stored = localStorage.getItem(teacherIdsKey);
+          if (stored) teacherIds = JSON.parse(stored);
+        } catch {}
+        const aiOnly = (result.data as Question[]).filter(
+          (q: Question) => !teacherIds.includes(q.id)
+        );
+        setQuestions(aiOnly);
       }
     } catch (error) {
       console.error("Error fetching questions:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const navigateToAskTeacherIfTeacherQuestion = (questionId: number) => {
+    try {
+      const teacherIdsKey = `classless_teacher_questions_${user?.id}`;
+      const stored = teacherIdsKey ? localStorage.getItem(teacherIdsKey) : null;
+      const teacherIds: number[] = stored ? JSON.parse(stored) : [];
+      if (teacherIds.includes(questionId)) {
+        router.push(`/ask-teacher?q=${questionId}`);
+      }
+    } catch {}
   };
 
   const handleLogout = () => {
@@ -148,6 +169,24 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+
+          {user.user_type === "student" && (
+            <Link href="/ask-teacher">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <MessageSquare className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-lg">Ask Teacher</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Send a question to your teacher and view their replies
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {user.user_type === "student" && (
             <Link href="/rag">
@@ -305,9 +344,16 @@ export default function DashboardPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-4">
-                {questions.slice(0, 5).map((question) => (
-                  <div key={question.id} className="border rounded-lg p-4">
+              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                {questions.map((question) => (
+                  <div
+                    key={question.id}
+                    className="border rounded-lg p-4"
+                    onClick={() =>
+                      navigateToAskTeacherIfTeacherQuestion(question.id)
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <p className="font-medium text-gray-900 line-clamp-2">
                         {question.question_text}
@@ -332,11 +378,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
-                {questions.length > 5 && (
-                  <div className="text-center pt-4">
-                    <Button variant="outline">View All Questions</Button>
-                  </div>
-                )}
+                {/* Scrollable list; removed View All button */}
               </div>
             )}
           </CardContent>

@@ -1,29 +1,46 @@
-"use client"
+"use client";
 
-import type React from "react"
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, GraduationCap, Building2 } from "lucide-react"
-import { getTollFreeNumber } from "@/lib/config"
-import { useLanguage } from "@/hooks/use-language"
-import { t } from "@/lib/i18n"
+import type React from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { BookOpen, GraduationCap, Building2 } from "lucide-react";
+import { getTollFreeNumber } from "@/lib/config";
+import { useLanguage } from "@/hooks/use-language";
+import { t } from "@/lib/i18n";
 
 export default function LoginPage() {
-  const lang = useLanguage()
+  const lang = useLanguage();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center justify-center space-x-2 mb-4 hover:opacity-80 transition-opacity"
+          >
             <BookOpen className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">{t(lang,'app_name')}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {t(lang, "app_name")}
+            </h1>
           </Link>
-          <CardTitle>{t(lang,'login_title','Welcome Back')}</CardTitle>
-          <CardDescription>{t(lang,'login_desc','Choose your role to get started with AI-powered learning')}</CardDescription>
+          <CardTitle>{t(lang, "login_title", "Welcome Back")}</CardTitle>
+          <CardDescription>
+            {t(
+              lang,
+              "login_desc",
+              "Choose your role to get started with AI-powered learning"
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Student Option */}
-          <Link href="/auth/register/student" className="block">
+          <Link href="/auth/login/student" className="block">
             <div className="border-2 border-blue-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -31,14 +48,20 @@ export default function LoginPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">Student</h3>
-                  <p className="text-sm text-gray-600">{t(lang,'web_mobile_desc','Join as a student to learn with AI tutoring')}</p>
+                  <p className="text-sm text-gray-600">
+                    {t(
+                      lang,
+                      "web_mobile_desc",
+                      "Join as a student to learn with AI tutoring"
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
           </Link>
 
           {/* Teacher Option */}
-          <Link href="/auth/register/teacher" className="block">
+          <Link href="/auth/login/teacher" className="block">
             <div className="border-2 border-green-200 rounded-lg p-4 hover:border-green-400 hover:bg-green-50 transition-all cursor-pointer">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-green-100 rounded-lg">
@@ -46,7 +69,13 @@ export default function LoginPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">Teacher</h3>
-                  <p className="text-sm text-gray-600">{t(lang,'feature_teachers_desc','Join as a teacher to guide students')}</p>
+                  <p className="text-sm text-gray-600">
+                    {t(
+                      lang,
+                      "feature_teachers_desc",
+                      "Join as a teacher to guide students"
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
@@ -54,9 +83,12 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              {t(lang,'already_account','Don\'t have an account?')} {" "}
-              <Link href="/auth/signin" className="text-blue-600 hover:underline">
-                {t(lang,'sign_in','Sign In')}
+              {t(lang, "already_account", "Don't have an account?")}{" "}
+              <Link
+                href="/auth/signin"
+                className="text-blue-600 hover:underline"
+              >
+                {t(lang, "sign_in", "Sign In")}
               </Link>
             </p>
           </div>
@@ -65,11 +97,12 @@ export default function LoginPage() {
             <p className="text-xs text-gray-500 text-center">
               You can also access Classless via:
               <br />
-              SMS: Text to {getTollFreeNumber('sms')} | Call: {getTollFreeNumber('voice')}
+              SMS: Text to {getTollFreeNumber("sms")} | Call:{" "}
+              {getTollFreeNumber("voice")}
             </p>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

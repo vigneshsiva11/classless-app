@@ -27,7 +27,6 @@ import {
   Brain,
 } from "lucide-react";
 import type { User, QuizAttendance } from "@/lib/types";
-import { getQuizAttendanceByStudent, getAllUsers } from "@/lib/database";
 
 interface QuizProgressWithStudent extends QuizAttendance {
   student_name: string;
@@ -80,29 +79,27 @@ export default function TeacherQuizProgressPage() {
 
   const fetchQuizProgress = async () => {
     try {
-      // Get all users to map student names
-      const allUsers = await getAllUsers();
-      const students = allUsers.filter((user) => user.user_type === "student");
+      // Fetch quiz progress from API route
+      const response = await fetch("/api/teacher/quiz-progress");
 
-      // Get all quiz attendance records
-      const allAttendance: QuizProgressWithStudent[] = [];
-
-      for (const student of students) {
-        const attendance = await getQuizAttendanceByStudent(student.id);
-        const attendanceWithNames = attendance.map((att) => ({
-          ...att,
-          student_name: student.name,
-        }));
-        allAttendance.push(...attendanceWithNames);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Sort by most recent first
-      allAttendance.sort(
-        (a, b) =>
-          new Date(b.attended_at).getTime() - new Date(a.attended_at).getTime()
-      );
+      const data = await response.json();
 
-      setQuizProgress(allAttendance);
+      if (data.success) {
+        // Sort by most recent first
+        const sortedProgress = data.progress.sort(
+          (a: QuizProgressWithStudent, b: QuizProgressWithStudent) =>
+            new Date(b.attended_at).getTime() -
+            new Date(a.attended_at).getTime()
+        );
+
+        setQuizProgress(sortedProgress);
+      } else {
+        console.error("API error:", data.error);
+      }
     } catch (error) {
       console.error("Error fetching quiz progress:", error);
     } finally {

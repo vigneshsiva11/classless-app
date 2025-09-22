@@ -12,14 +12,16 @@ export async function GET(request: NextRequest) {
 
   try {
     let scholarships = [] as typeof mockDatabase.scholarships;
+    let source = "none";
 
-    if (realtime) {
-      // Use real-time scholarship aggregator
-      try {
-        const realtimeScholarships =
-          await realtimeScholarshipAggregator.fetchAllScholarships(
-            state || undefined
-          );
+    // Always try real-time scholarship aggregator first
+    try {
+      const realtimeScholarships =
+        await realtimeScholarshipAggregator.fetchAllScholarships(
+          state || undefined
+        );
+
+      if (realtimeScholarships.length > 0) {
         // Convert RealtimeScholarship to Scholarship format
         scholarships = realtimeScholarships.map((rt) => ({
           id: rt.id,
@@ -35,15 +37,16 @@ export async function GET(request: NextRequest) {
           requirements: rt.requirements,
           applicationUrl: rt.applicationUrl,
         }));
-      } catch (e) {
-        console.error(
-          "[Scholarships] Real-time fetch failed, falling back to live:",
-          e
+        source = "realtime";
+        console.log(
+          `[Scholarships] Found ${scholarships.length} real-time scholarships`
         );
       }
+    } catch (e) {
+      console.error("[Scholarships] Real-time fetch failed:", e);
     }
 
-    // Fallback to live fetch if real-time failed or not requested
+    // If no real-time data, try live fetch as secondary option
     if (scholarships.length === 0) {
       try {
         const live = await fetchLiveScholarships({
@@ -52,18 +55,14 @@ export async function GET(request: NextRequest) {
         });
         if (Array.isArray(live) && live.length > 0) {
           scholarships = live;
+          source = "live";
+          console.log(
+            `[Scholarships] Found ${scholarships.length} live scholarships`
+          );
         }
       } catch (e) {
-        console.error(
-          "[Scholarships] Live fetch failed, falling back to mock:",
-          e
-        );
+        console.error("[Scholarships] Live fetch failed:", e);
       }
-    }
-
-    // Final fallback to mock data
-    if (scholarships.length === 0) {
-      scholarships = mockDatabase.scholarships;
     }
 
     // Filter scholarships based on criteria
@@ -85,13 +84,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       scholarships,
-      source: realtime ? "realtime" : "live",
+      source,
       lastUpdated: new Date().toISOString(),
       count: scholarships.length,
+      isRealtimeOnly: true, // Flag to indicate we're only showing real-time data
     });
   } catch (error) {
+    console.error("[Scholarships] API error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch scholarships" },
+      {
+        error: "Failed to fetch real-time scholarships",
+        scholarships: [],
+        source: "error",
+        count: 0,
+        isRealtimeOnly: true,
+      },
       { status: 500 }
     );
   }

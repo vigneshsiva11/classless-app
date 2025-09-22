@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Hash, Lock, ArrowLeft } from "lucide-react";
+import { BookOpen, Phone, Lock, ArrowLeft, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { getTollFreeNumber } from "@/lib/config";
 
@@ -43,20 +43,35 @@ export default function StudentLoginPage() {
         setIsLoading(false);
         return;
       }
-      // For demo purposes, we'll check if user exists by roll number
-      // In a real app, you'd have a proper authentication system
+      // Try to get mapped phone for roll; if absent, attempt using entered value as phone
+      const mappedPhone = localStorage.getItem(
+        `classless_roll_to_phone_${roll}`
+      );
+      const lookupPhone = mappedPhone || roll;
+
+      // Lookup user by resolved phone
       const response = await fetch(
-        `/api/users?roll_number=${encodeURIComponent(formData.rollNumber)}`
+        `/api/users?phone=${encodeURIComponent(lookupPhone)}`
       );
       const result = await response.json();
 
       if (result.success && result.data) {
+        // Simple client-side password check using password saved at registration
+        const savedPwKey = `classless_auth_pw_${lookupPhone}`;
+        const savedPassword = localStorage.getItem(savedPwKey);
+        if (!savedPassword || savedPassword !== formData.password) {
+          toast.error("Incorrect password");
+          setIsLoading(false);
+          return;
+        }
+
         localStorage.setItem("classless_user", JSON.stringify(result.data));
         toast.success("Login successful!");
+        // Redirect student to student dashboard
         router.push("/dashboard");
       } else {
-        toast.error("Student not found. Please register first.");
-        router.push("/auth/register/student");
+        toast.error("Student not found. Please check your details.");
+        // Do not redirect; allow user to correct input
       }
     } catch (error) {
       console.error("Login error:", error);

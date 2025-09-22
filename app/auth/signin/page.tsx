@@ -75,7 +75,15 @@ export default function SignInPage() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        // Store user info in localStorage (simple auth for hackathon)
+        // Simple client-side password check using password saved at registration
+        const savedPwKey = `classless_auth_pw_${result.data.phone_number}`;
+        const savedPassword = localStorage.getItem(savedPwKey);
+        if (!savedPassword || savedPassword !== formData.password) {
+          toast.error("Incorrect password");
+          setIsLoading(false);
+          return;
+        }
+
         localStorage.setItem("classless_user", JSON.stringify(result.data));
         toast.success("Login successful!");
         router.push("/dashboard");
@@ -139,11 +147,7 @@ export default function SignInPage() {
                 id="lang"
                 className="w-full border rounded px-3 py-2 text-sm"
                 onChange={(e) => setStoredLanguage(e.target.value as any)}
-                defaultValue={
-                  typeof window !== "undefined"
-                    ? localStorage.getItem("classless_lang") || "en"
-                    : "en"
-                }
+                value={lang}
               >
                 <option value="en">English</option>
                 <option value="hi">Hindi</option>

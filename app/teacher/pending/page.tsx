@@ -1,219 +1,220 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
-  BookOpen, 
-  MessageSquare, 
-  ArrowLeft, 
-  Send, 
-  Clock, 
-  User, 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  BookOpen,
+  MessageSquare,
+  ArrowLeft,
+  Send,
+  Clock,
+  User,
   CheckCircle,
   AlertCircle,
   Loader2,
   Filter,
-  Search
-} from "lucide-react"
-import { toast } from "sonner"
-import type { User, Question } from "@/lib/types"
+  Search,
+} from "lucide-react";
+import { toast } from "sonner";
+import type { User, Question } from "@/lib/types";
 
 interface PendingQuestion extends Question {
-  student_name: string
-  student_phone: string
-  subject?: string
-  grade_level?: string
+  student_name: string;
+  student_phone: string;
+  subject?: string;
+  grade_level?: string;
 }
 
 export default function TeacherPendingQuestionsPage() {
-  const [teacher, setTeacher] = useState<User | null>(null)
-  const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([])
-  const [filteredQuestions, setFilteredQuestions] = useState<PendingQuestion[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedQuestion, setSelectedQuestion] = useState<PendingQuestion | null>(null)
-  const [teacherAnswer, setTeacherAnswer] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [filterStatus, setFilterStatus] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const router = useRouter()
+  const [teacher, setTeacher] = useState<User | null>(null);
+  const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>(
+    []
+  );
+  const [filteredQuestions, setFilteredQuestions] = useState<PendingQuestion[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedQuestion, setSelectedQuestion] =
+    useState<PendingQuestion | null>(null);
+  const [teacherAnswer, setTeacherAnswer] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     // Check if user is logged in and is a teacher
-    const userData = localStorage.getItem("classless_user")
+    const userData = localStorage.getItem("classless_user");
     if (!userData) {
-      router.push("/auth/login")
-      return
+      router.push("/auth/login");
+      return;
     }
 
-    const parsedUser = JSON.parse(userData)
+    const parsedUser = JSON.parse(userData);
     if (parsedUser.user_type !== "teacher") {
-      router.push("/dashboard")
-      return
+      router.push("/dashboard");
+      return;
     }
 
-    setTeacher(parsedUser)
-    fetchPendingQuestions()
-  }, [router])
+    setTeacher(parsedUser);
+    fetchPendingQuestions();
+  }, [router]);
 
   useEffect(() => {
     // Filter questions based on search and status
-    let filtered = pendingQuestions
+    let filtered = pendingQuestions;
 
     if (searchQuery) {
-      filtered = filtered.filter(q => 
-        q.question_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        q.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        q.language.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      filtered = filtered.filter(
+        (q) =>
+          q.question_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          q.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          q.language.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
     if (filterStatus !== "all") {
-      filtered = filtered.filter(q => q.status === filterStatus)
+      filtered = filtered.filter((q) => q.status === filterStatus);
     }
 
-    setFilteredQuestions(filtered)
-  }, [pendingQuestions, searchQuery, filterStatus])
+    setFilteredQuestions(filtered);
+  }, [pendingQuestions, searchQuery, filterStatus]);
 
   const fetchPendingQuestions = async () => {
     try {
-      // In a real app, this would fetch from your API
-      // For now, using mock data
-      const mockQuestions: PendingQuestion[] = [
-        {
-          id: 1,
-          question_text: "What is the difference between photosynthesis and cellular respiration?",
-          language: "en",
-          question_type: "text",
-          status: "pending",
-          user_id: 101,
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          student_name: "Priya Sharma",
-          student_phone: "+91-9876543210",
-          subject: "Biology",
-          grade_level: "10th"
-        },
-        {
-          id: 2,
-          question_text: "ஒளிச்சேர்க்கை என்றால் என்ன? தாவரங்கள் எப்படி உணவு தயாரிக்கின்றன?",
-          language: "ta",
-          question_type: "text",
-          status: "pending",
-          user_id: 102,
-          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-          student_name: "Karthik Raj",
-          student_phone: "+91-9876543211",
-          subject: "Science",
-          grade_level: "8th"
-        },
-        {
-          id: 3,
-          question_text: "How do I solve quadratic equations using the quadratic formula?",
-          language: "en",
-          question_type: "text",
-          status: "pending",
-          user_id: 103,
-          created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-          student_name: "Aisha Khan",
-          student_phone: "+91-9876543212",
-          subject: "Mathematics",
-          grade_level: "11th"
-        },
-        {
-          id: 4,
-          question_text: "मैं कैसे अपने अंग्रेजी भाषा कौशल में सुधार कर सकता हूं?",
-          language: "hi",
-          question_type: "text",
-          status: "pending",
-          user_id: 104,
-          created_at: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
-          student_name: "Rahul Verma",
-          student_phone: "+91-9876543213",
-          subject: "English",
-          grade_level: "9th"
-        }
-      ]
+      const res = await fetch(`/api/questions?status=pending`);
+      const data = await res.json();
+      if (!data?.success) throw new Error(data?.error || "Failed");
 
-      setPendingQuestions(mockQuestions)
-      setFilteredQuestions(mockQuestions)
+      // Map API results to UI shape. Only show questions created by users (students).
+      const mapped: PendingQuestion[] = (data.data || []).map((q: any) => ({
+        id: q.id,
+        question_text: q.question_text,
+        language: q.language || "en",
+        question_type: q.question_type || "text",
+        status: q.status || "pending",
+        user_id: q.user_id,
+        created_at: q.created_at,
+        student_name: q.student_name || `Student #${q.user_id}`,
+        student_phone: q.student_phone || "",
+        subject: q.subject || q.subject_id || undefined,
+        grade_level: q.grade_level || undefined,
+      }));
+
+      setPendingQuestions(mapped);
+      setFilteredQuestions(mapped);
     } catch (error) {
-      console.error("Error fetching pending questions:", error)
-      toast.error("Failed to load pending questions")
+      console.error("Error fetching pending questions:", error);
+      toast.error("Failed to load pending questions");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleAnswerQuestion = async () => {
     if (!selectedQuestion || !teacherAnswer.trim()) {
-      toast.error("Please provide an answer")
-      return
+      toast.error("Please provide an answer");
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      // In a real app, this would submit to your API
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      // Store teacher's answer in the database
+      await fetch(`/api/answers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question_id: selectedQuestion.id,
+          answer_text: teacherAnswer.trim(),
+          answer_type: "teacher",
+          teacher_id: teacher?.id,
+        }),
+      });
+
+      // Also add a reply entry so students can see the answer under their question thread
+      await fetch(`/api/questions/${selectedQuestion.id}/replies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: teacher?.id,
+          text: teacherAnswer.trim(),
+        }),
+      });
 
       // Update the question status
-      setPendingQuestions(prev => 
-        prev.map(q => 
-          q.id === selectedQuestion.id 
+      setPendingQuestions((prev) =>
+        prev.map((q) =>
+          q.id === selectedQuestion.id
             ? { ...q, status: "answered" as const }
             : q
         )
-      )
+      );
 
-      toast.success("Answer submitted successfully!")
-      setSelectedQuestion(null)
-      setTeacherAnswer("")
+      toast.success("Answer submitted successfully!");
+      setSelectedQuestion(null);
+      setTeacherAnswer("");
     } catch (error) {
-      console.error("Error submitting answer:", error)
-      toast.error("Failed to submit answer")
+      console.error("Error submitting answer:", error);
+      toast.error("Failed to submit answer");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const getLanguageName = (code: string) => {
     const languages: { [key: string]: string } = {
-      'en': 'English',
-      'hi': 'Hindi',
-      'ta': 'Tamil',
-      'bn': 'Bengali',
-      'te': 'Telugu',
-      'mr': 'Marathi',
-      'gu': 'Gujarati',
-      'kn': 'Kannada',
-      'ml': 'Malayalam',
-      'pa': 'Punjabi',
-      'ur': 'Urdu',
-      'or': 'Odia',
-      'as': 'Assamese',
-      'sa': 'Sanskrit'
-    }
-    return languages[code] || code.toUpperCase()
-  }
+      en: "English",
+      hi: "Hindi",
+      ta: "Tamil",
+      bn: "Bengali",
+      te: "Telugu",
+      mr: "Marathi",
+      gu: "Gujarati",
+      kn: "Kannada",
+      ml: "Malayalam",
+      pa: "Punjabi",
+      ur: "Urdu",
+      or: "Odia",
+      as: "Assamese",
+      sa: "Sanskrit",
+    };
+    return languages[code] || code.toUpperCase();
+  };
 
   const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-    
-    if (diffInHours < 1) return "Just now"
-    if (diffInHours === 1) return "1 hour ago"
-    if (diffInHours < 24) return `${diffInHours} hours ago`
-    
-    const diffInDays = Math.floor(diffInHours / 24)
-    if (diffInDays === 1) return "1 day ago"
-    return `${diffInDays} days ago`
-  }
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    );
+
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours === 1) return "1 hour ago";
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return "1 day ago";
+    return `${diffInDays} days ago`;
+  };
 
   if (isLoading) {
     return (
@@ -223,10 +224,10 @@ export default function TeacherPendingQuestionsPage() {
           <p className="text-gray-600">Loading pending questions...</p>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!teacher) return null
+  if (!teacher) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -243,11 +244,15 @@ export default function TeacherPendingQuestionsPage() {
               </Link>
               <div className="flex items-center space-x-2">
                 <MessageSquare className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-gray-900">Answer Questions</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Answer Questions
+                </h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, {teacher.name}</span>
+              <span className="text-sm text-gray-600">
+                Welcome, {teacher.name}
+              </span>
             </div>
           </div>
         </div>
@@ -261,7 +266,12 @@ export default function TeacherPendingQuestionsPage() {
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-orange-600" />
                 <div>
-                  <p className="text-2xl font-bold">{pendingQuestions.filter(q => q.status === "pending").length}</p>
+                  <p className="text-2xl font-bold">
+                    {
+                      pendingQuestions.filter((q) => q.status === "pending")
+                        .length
+                    }
+                  </p>
                   <p className="text-sm text-gray-600">Pending Questions</p>
                 </div>
               </div>
@@ -272,30 +282,13 @@ export default function TeacherPendingQuestionsPage() {
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-2xl font-bold">{pendingQuestions.filter(q => q.status === "answered").length}</p>
+                  <p className="text-2xl font-bold">
+                    {
+                      pendingQuestions.filter((q) => q.status === "answered")
+                        .length
+                    }
+                  </p>
                   <p className="text-sm text-gray-600">Answered Today</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">{new Set(pendingQuestions.map(q => q.user_id)).size}</p>
-                  <p className="text-sm text-gray-600">Students Helped</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <BookOpen className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold">{new Set(pendingQuestions.map(q => q.subject)).size}</p>
-                  <p className="text-sm text-gray-600">Subjects Covered</p>
                 </div>
               </div>
             </CardContent>
@@ -349,10 +342,12 @@ export default function TeacherPendingQuestionsPage() {
                 </Card>
               ) : (
                 filteredQuestions.map((question) => (
-                  <Card 
-                    key={question.id} 
+                  <Card
+                    key={question.id}
                     className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedQuestion?.id === question.id ? 'ring-2 ring-blue-500' : ''
+                      selectedQuestion?.id === question.id
+                        ? "ring-2 ring-blue-500"
+                        : ""
                     }`}
                     onClick={() => setSelectedQuestion(question)}
                   >
@@ -375,7 +370,11 @@ export default function TeacherPendingQuestionsPage() {
                           </div>
                         </div>
                         <Badge
-                          variant={question.status === "pending" ? "secondary" : "default"}
+                          variant={
+                            question.status === "pending"
+                              ? "secondary"
+                              : "default"
+                          }
                           className="ml-2"
                         >
                           {question.status}
@@ -406,21 +405,30 @@ export default function TeacherPendingQuestionsPage() {
             {selectedQuestion ? (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Answer for {selectedQuestion.student_name}</CardTitle>
+                  <CardTitle className="text-lg">
+                    Answer for {selectedQuestion.student_name}
+                  </CardTitle>
                   <CardDescription>
-                    Question asked {getTimeAgo(selectedQuestion.created_at)} in {getLanguageName(selectedQuestion.language)}
+                    Question asked {getTimeAgo(selectedQuestion.created_at)} in{" "}
+                    {getLanguageName(selectedQuestion.language)}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="question" className="text-sm font-medium">Student's Question:</Label>
+                    <Label htmlFor="question" className="text-sm font-medium">
+                      Student's Question:
+                    </Label>
                     <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                      <p className="text-gray-700">{selectedQuestion.question_text}</p>
+                      <p className="text-gray-700">
+                        {selectedQuestion.question_text}
+                      </p>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <Label htmlFor="answer" className="text-sm font-medium">Your Answer:</Label>
+                    <Label htmlFor="answer" className="text-sm font-medium">
+                      Your Answer:
+                    </Label>
                     <Textarea
                       id="answer"
                       placeholder="Provide a detailed, helpful answer to the student's question..."
@@ -431,7 +439,7 @@ export default function TeacherPendingQuestionsPage() {
                   </div>
 
                   <div className="flex space-x-3">
-                    <Button 
+                    <Button
                       onClick={handleAnswerQuestion}
                       disabled={isSubmitting || !teacherAnswer.trim()}
                       className="flex-1"
@@ -448,11 +456,11 @@ export default function TeacherPendingQuestionsPage() {
                         </>
                       )}
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => {
-                        setSelectedQuestion(null)
-                        setTeacherAnswer("")
+                        setSelectedQuestion(null);
+                        setTeacherAnswer("");
                       }}
                     >
                       Cancel
@@ -464,7 +472,9 @@ export default function TeacherPendingQuestionsPage() {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Select a question from the list to provide an answer.</p>
+                  <p className="text-gray-600">
+                    Select a question from the list to provide an answer.
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -472,5 +482,5 @@ export default function TeacherPendingQuestionsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -99,6 +99,16 @@ export default function StudentRegisterPage() {
       const result = await response.json();
 
       if (result.success) {
+        // Save password locally for simple client-side check
+        const savedPwKey = `classless_auth_pw_${result.data.phone_number}`;
+        localStorage.setItem(savedPwKey, formData.password);
+        // Map roll number to phone for student login
+        if (formData.rollNumber) {
+          localStorage.setItem(
+            `classless_roll_to_phone_${formData.rollNumber.trim()}`,
+            result.data.phone_number
+          );
+        }
         localStorage.setItem("classless_user", JSON.stringify(result.data));
         toast.success("Registration successful!");
         router.push("/dashboard");

@@ -14,13 +14,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Mail, Lock, ArrowLeft } from "lucide-react";
+import { BookOpen, Phone, Lock, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { getTollFreeNumber } from "@/lib/config";
 
 export default function TeacherLoginPage() {
   const [formData, setFormData] = useState({
-    email: "",
+    phoneNumber: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -32,10 +32,14 @@ export default function TeacherLoginPage() {
 
     try {
       // Client-side validation
-      const email = formData.email.trim();
-      const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      if (!isValidEmail) {
-        toast.error("Please enter a valid email address");
+      const phone = formData.phoneNumber.trim();
+      const phoneDigits = phone.replace(/\D/g, "");
+      const isValidPhone =
+        /^\+?[0-9\-\s()]{7,20}$/.test(phone) &&
+        phoneDigits.length >= 10 &&
+        phoneDigits.length <= 15;
+      if (!isValidPhone) {
+        toast.error("Please enter a valid phone number");
         setIsLoading(false);
         return;
       }
@@ -44,16 +48,24 @@ export default function TeacherLoginPage() {
         setIsLoading(false);
         return;
       }
-      // For demo purposes, we'll check if user exists by email
-      // In a real app, you'd have a proper authentication system
+      // Lookup user by phone (server supports this)
       const response = await fetch(
-        `/api/users?email=${encodeURIComponent(formData.email)}`
+        `/api/users?phone=${encodeURIComponent(formData.phoneNumber)}`
       );
       const result = await response.json();
 
       if (result.success && result.data) {
+        const savedPwKey = `classless_auth_pw_${result.data.phone_number}`;
+        const savedPassword = localStorage.getItem(savedPwKey);
+        if (!savedPassword || savedPassword !== formData.password) {
+          toast.error("Incorrect password");
+          setIsLoading(false);
+          return;
+        }
+
         localStorage.setItem("classless_user", JSON.stringify(result.data));
         toast.success("Login successful!");
+        // Redirect teacher to teacher dashboard section
         router.push("/dashboard");
       } else {
         toast.error("Teacher not found. Please register first.");
@@ -93,18 +105,24 @@ export default function TeacherLoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="phoneNumber">Phone Number</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="+91-9876543210"
+                  value={formData.phoneNumber}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (/^[0-9+\-\s()]*$/.test(next)) {
+                      setFormData({ ...formData, phoneNumber: next });
+                    }
+                  }}
                   className="pl-10"
+                  inputMode="tel"
+                  pattern="^[0-9+\-\s()]{7,20}$"
+                  maxLength={20}
                   required
                 />
               </div>
