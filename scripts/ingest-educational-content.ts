@@ -5,7 +5,6 @@
 
 import { contentManagementService } from "../lib/content-management-service";
 import { educationalContent } from "../lib/educational-content";
-import { getContentStatistics } from "../lib/educational-content";
 
 interface IngestionOptions {
   clearExisting?: boolean;
@@ -49,6 +48,24 @@ class EducationalContentIngestion {
 
       // Ingest educational content
       await this.ingestContent();
+
+      // Optionally seed syllabus after content if flag provided
+      if (process.argv.includes("--seed-syllabus")) {
+        const boardArg = process.argv.find((a) => a.startsWith("--board="));
+        const langArg = process.argv.find((a) => a.startsWith("--language="));
+        const board = boardArg ? boardArg.split("=")[1] : undefined;
+        const language = langArg ? langArg.split("=")[1] : undefined;
+        console.log(
+          "📘 Seeding syllabus (Classes 1–12)",
+          board ? `for ${board}` : ""
+        );
+        if (!this.options.dryRun) {
+          await contentManagementService.initializeWithSyllabus({
+            board,
+            language,
+          });
+        }
+      }
 
       // Show final statistics
       await this.showFinalStatistics();
@@ -108,7 +125,13 @@ class EducationalContentIngestion {
       );
 
       try {
-        await contentManagementService.upsertDocuments(batch);
+        await contentManagementService.addMultipleContent(
+          batch.map((c) => ({
+            id: c.id,
+            text: c.text,
+            metadata: c.metadata as any,
+          }))
+        );
         console.log(`✅ Batch ${i + 1} completed successfully`);
 
         if (this.options.verbose) {
@@ -184,7 +207,13 @@ class EducationalContentIngestion {
 
     try {
       await contentManagementService.initialize();
-      await contentManagementService.upsertDocuments(sampleContent);
+      await contentManagementService.addMultipleContent(
+        sampleContent.map((c) => ({
+          id: c.id,
+          text: c.text,
+          metadata: c.metadata as any,
+        }))
+      );
       console.log("\n✅ Test ingestion successful!");
 
       // Test search functionality

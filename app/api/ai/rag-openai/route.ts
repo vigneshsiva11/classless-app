@@ -257,7 +257,7 @@ async function generateAnswer(
   const gradeText = grade ? `Class ${grade}` : "appropriate grade level";
   const context = retrievedDocs.map((doc) => doc.text).join("\n\n");
 
-  const prompt = `You are an AI tutor for ${gradeText} students. Use the following context to answer the question accurately and helpfully.
+  const prompt = `You are an AI tutor for ${gradeText} students. Prefer syllabus-aligned information when available. Use the following context to answer the question accurately and helpfully.
 
 Context:
 ${context}
@@ -269,7 +269,8 @@ Instructions:
 - If the context doesn't contain enough information, say so clearly
 - Use simple, clear language appropriate for the grade level
 - Provide examples when helpful
-- If the question is about something not in the syllabus, provide a brief, helpful response
+- If the question is outside the syllabus, provide a brief high-level overview and note it's beyond syllabus
+- Structure the answer as: brief concept, step-by-step explanation, 1-2 examples, short recap
 
 Answer:`;
 

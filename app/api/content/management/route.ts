@@ -101,6 +101,19 @@ export async function POST(request: NextRequest) {
           },
         });
 
+      case "initialize-syllabus":
+        const { board, language } = body || {};
+        await contentManagementService.initializeWithSyllabus({
+          board,
+          language,
+        });
+        return NextResponse.json({
+          success: true,
+          data: {
+            message: "Syllabus (Classes 1-12) initialized successfully",
+          },
+        });
+
       case "clear":
         await contentManagementService.clearAllContent();
         return NextResponse.json({

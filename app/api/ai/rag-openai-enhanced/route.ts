@@ -56,18 +56,112 @@ async function retrieveDocuments(
   topK: number = 5
 ): Promise<any[]> {
   try {
-    // Use the vector database service for retrieval
-    const results = await vectorDatabaseService.searchSimilar(query, {
-      topK,
-      grade,
-    });
+    // Infer subject from question to tighten retrieval
+    const qLower = query.toLowerCase();
+    const mathKeywords = [
+      "polynomial",
+      "algebra",
+      "equation",
+      "fraction",
+      "geometry",
+      "triangle",
+      "right triangle",
+      "angle",
+      "line",
+      "shape",
+      "polygon",
+      "circle",
+      "perimeter",
+      "area",
+      "volume",
+      "mensuration",
+      "coordinate",
+      "graph",
+      "trigonometry",
+      "matrix",
+      "determinant",
+      "calculus",
+    ];
+    const inferredSubject = mathKeywords.some((k) => qLower.includes(k))
+      ? "mathematics"
+      : undefined;
 
-    return results.map((result) => ({
-      id: result.id,
-      text: result.text || "",
-      metadata: result.metadata,
-      score: result.score,
-    }));
+    // Two-pass retrieval: try subject-focused first, then broaden
+    let results = [] as any[];
+    if (inferredSubject) {
+      results = await vectorDatabaseService.searchSimilar(query, {
+        topK: topK + 5,
+        grade,
+        subject: inferredSubject,
+        filter: { isSyllabus: true },
+      });
+    }
+    // If too few, broaden without subject but keep syllabus filter
+    if (!results || results.length < 2) {
+      const broad = await vectorDatabaseService.searchSimilar(query, {
+        topK: topK + 5,
+        grade,
+        filter: { isSyllabus: true },
+      });
+      results = [...(results || []), ...broad];
+    }
+
+    // If syllabus-filtered results are few, broaden search and then prefer syllabus
+    let fallbackResults: any[] = [];
+    if (!results || results.length < 3) {
+      const broad = await vectorDatabaseService.searchSimilar(query, {
+        topK: topK + 5,
+        grade,
+      });
+      fallbackResults = broad.map((r) => ({
+        id: r.id,
+        text: r.text || "",
+        metadata: r.metadata,
+        score: r.score,
+      }));
+    }
+
+    const all = [
+      ...results.map((r) => ({
+        id: r.id,
+        text: r.text || "",
+        metadata: r.metadata,
+        score: (r as any).score || 0,
+      })),
+      ...fallbackResults,
+    ];
+
+    // Re-rank: prioritize syllabus entries, then by score, then subject match
+    const unique = new Map<string, any>();
+    for (const item of all) {
+      if (!unique.has(item.id) || item.score > unique.get(item.id).score) {
+        unique.set(item.id, item);
+      }
+    }
+    let reranked = Array.from(unique.values())
+      .sort((a, b) => {
+        const aSyl = a?.metadata?.isSyllabus ? 1 : 0;
+        const bSyl = b?.metadata?.isSyllabus ? 1 : 0;
+        if (aSyl !== bSyl) return bSyl - aSyl;
+        const aSub = (a?.metadata?.subject || "").toLowerCase();
+        const bSub = (b?.metadata?.subject || "").toLowerCase();
+        if (inferredSubject && aSub !== bSub) {
+          if (aSub === inferredSubject) return -1;
+          if (bSub === inferredSubject) return 1;
+        }
+        return (b.score || 0) - (a.score || 0);
+      })
+      .slice(0, topK + 1);
+
+    // Final filter: if we inferred subject, drop obvious mismatches unless not enough results
+    if (inferredSubject) {
+      const filtered = reranked.filter(
+        (d) => (d?.metadata?.subject || "").toLowerCase() === inferredSubject
+      );
+      if (filtered.length >= Math.min(topK, 3)) reranked = filtered;
+    }
+
+    return reranked.slice(0, topK);
   } catch (error) {
     console.error("[RAG OpenAI Enhanced] Document retrieval failed:", error);
 
@@ -106,7 +200,7 @@ async function generateAnswer(
   const gradeText = grade ? `Class ${grade}` : "appropriate grade level";
   const context = retrievedDocs.map((doc) => doc.text).join("\n\n");
 
-  const prompt = `You are an AI tutor for ${gradeText} students. Use the following context to answer the question accurately and helpfully.
+  const prompt = `You are an AI tutor for ${gradeText} students. Prefer syllabus-aligned information when available. Use the following context to answer the question accurately and helpfully.
 
 Context:
 ${context}
@@ -118,8 +212,8 @@ Instructions:
 - If the context doesn't contain enough information, say so clearly
 - Use simple, clear language appropriate for the grade level
 - Provide examples when helpful
-- If the question is about something not in the syllabus, provide a brief, helpful response
-- Structure your answer with clear explanations and examples
+ - If the question is outside the syllabus, provide a brief high-level overview and note it's beyond syllabus
+ - Structure the answer as: brief concept, step-by-step explanation, 1-2 examples, short recap
 
 Answer:`;
 
@@ -137,6 +231,17 @@ Answer:`;
     );
   } catch (error) {
     console.error("[RAG OpenAI Enhanced] Answer generation failed:", error);
+    // Fallback: extractive concise answer from retrieved context
+    if (retrievedDocs?.length) {
+      const first = (retrievedDocs[0].text || "").trim();
+      if (first) {
+        const excerpt = first
+          .split(/(?<=[.!?])\s+/)
+          .slice(0, 2)
+          .join(" ");
+        return `From the syllabus: ${excerpt}`;
+      }
+    }
     return "I'm sorry, I couldn't generate an answer at this time.";
   }
 }

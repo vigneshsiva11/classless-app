@@ -12,6 +12,10 @@ export interface ContentMetadata {
   tags?: string[];
   author?: string;
   lastUpdated?: Date;
+  // Marks content as syllabus/curriculum outline to enable prioritized retrieval
+  isSyllabus?: boolean;
+  // Optional education board/curriculum tag
+  board?: string;
 }
 
 export interface ContentSearchFilters {
@@ -269,6 +273,85 @@ export class ContentManagementService {
     }
   }
 
+  // Initialize vector DB with syllabus outlines for Classes 1-12 across core subjects
+  async initializeWithSyllabus(
+    params: { board?: string; language?: string } = {}
+  ): Promise<void> {
+    await this.initialize();
+    const board = params.board || "generic";
+    const language = params.language || "en";
+
+    try {
+      console.log(
+        "[Content Management] Initializing syllabus (Classes 1-12)..."
+      );
+
+      const subjects = [
+        "mathematics",
+        "science",
+        "english",
+        "history",
+        "geography",
+        // High school streams (will be filtered by chapters availability)
+        "physics",
+        "chemistry",
+        "biology",
+      ];
+
+      const docChunks: DocChunk[] = [];
+
+      for (let grade = 1; grade <= 12; grade++) {
+        for (const subject of subjects) {
+          const chapters = this.getCommonChapters(subject, grade, board);
+          if (!chapters || chapters.length === 0) continue;
+
+          for (const chapter of chapters) {
+            const id = this.generateContentId({ subject, grade, chapter });
+            const objectives = this.getSuggestedTopics(subject, grade);
+            const text = [
+              `Syllabus Outline — Class ${grade} — ${subject} — ${chapter}`,
+              "Learning Objectives:",
+              ...objectives
+                .slice(0, 5)
+                .map((t, i) => `${i + 1}. ${t.replace(/_/g, " ")}`),
+              "Assessment Focus:",
+              "- Concept understanding",
+              "- Simple applications with examples appropriate to the grade",
+              "- Short explanations using clear language",
+            ].join("\n");
+
+            docChunks.push({
+              id,
+              text,
+              metadata: {
+                subject,
+                grade,
+                chapter,
+                topic: chapter,
+                language,
+                isSyllabus: true,
+                board,
+                lastUpdated: new Date().toISOString(),
+              },
+            });
+          }
+        }
+      }
+
+      if (docChunks.length > 0) {
+        await vectorDatabaseService.upsertDocuments(docChunks);
+        console.log(
+          `[Content Management] Syllabus initialized with ${docChunks.length} entries`
+        );
+      } else {
+        console.warn("[Content Management] No syllabus chapters generated");
+      }
+    } catch (error) {
+      console.error("[Content Management] Error initializing syllabus:", error);
+      throw error;
+    }
+  }
+
   // Clear all content
   async clearAllContent(): Promise<void> {
     await this.initialize();
@@ -436,8 +519,13 @@ export class ContentManagementService {
     }
   }
 
-  private getCommonChapters(subject: string, grade: number): string[] {
-    const chapterMap: { [key: string]: { [grade: number]: string[] } } = {
+  private getCommonChapters(
+    subject: string,
+    grade: number,
+    board: string = "generic"
+  ): string[] {
+    const normalizedBoard = (board || "generic").toLowerCase();
+    const generic: { [key: string]: { [grade: number]: string[] } } = {
       mathematics: {
         1: ["Numbers", "Addition", "Subtraction", "Shapes", "Measurement"],
         2: [
@@ -544,7 +632,121 @@ export class ContentManagementService {
       },
     };
 
-    return chapterMap[subject]?.[grade] || [];
+    const cbse: { [key: string]: { [grade: number]: string[] } } = {
+      mathematics: {
+        9: [
+          "Number Systems",
+          "Polynomials",
+          "Coordinate Geometry",
+          "Linear Equations in Two Variables",
+          "Triangles",
+        ],
+        10: [
+          "Real Numbers",
+          "Polynomials",
+          "Pair of Linear Equations in Two Variables",
+          "Triangles",
+          "Circles",
+        ],
+        11: [
+          "Sets",
+          "Relations and Functions",
+          "Trigonometric Functions",
+          "Complex Numbers",
+        ],
+        12: [
+          "Relations and Functions",
+          "Inverse Trigonometric Functions",
+          "Matrices",
+          "Determinants",
+          "Continuity and Differentiability",
+        ],
+      },
+      science: generic.science,
+      physics: {
+        11: [
+          "Units and Measurements",
+          "Kinematics",
+          "Laws of Motion",
+          "Work, Energy and Power",
+        ],
+        12: [
+          "Electrostatics",
+          "Current Electricity",
+          "Magnetic Effects",
+          "Optics",
+        ],
+      },
+      chemistry: {
+        11: [
+          "Some Basic Concepts of Chemistry",
+          "Atomic Structure",
+          "Chemical Bonding",
+          "Thermodynamics",
+        ],
+        12: [
+          "Solid State",
+          "Solutions",
+          "Electrochemistry",
+          "Chemical Kinetics",
+          "Organic Chemistry",
+        ],
+      },
+      biology: {
+        11: [
+          "Diversity of Living Organisms",
+          "Structural Organisation",
+          "Cell Structure and Function",
+        ],
+        12: [
+          "Reproduction",
+          "Genetics and Evolution",
+          "Biology and Human Welfare",
+          "Biotechnology",
+        ],
+      },
+    };
+
+    const icse: { [key: string]: { [grade: number]: string[] } } = {
+      mathematics: generic.mathematics,
+      science: generic.science,
+      physics: {
+        10: [
+          "Force, Work, Power and Energy",
+          "Light",
+          "Sound",
+          "Electricity and Magnetism",
+        ],
+      },
+      chemistry: {
+        10: [
+          "Periodic Table",
+          "Chemical Bonding",
+          "Acids, Bases and Salts",
+          "Mole Concept and Stoichiometry",
+        ],
+      },
+      biology: {
+        10: [
+          "Basic Biology",
+          "Plant Physiology",
+          "Human Anatomy and Physiology",
+          "Health and Hygiene",
+        ],
+      },
+    };
+
+    const state: { [key: string]: { [grade: number]: string[] } } = generic;
+
+    const boardMap: Record<string, typeof generic> = {
+      generic,
+      cbse: cbse as any,
+      icse: icse as any,
+      state: state as any,
+    };
+
+    const selected = boardMap[normalizedBoard] || generic;
+    return selected[subject]?.[grade] || generic[subject]?.[grade] || [];
   }
 
   private getSuggestedTopics(subject: string, grade: number): string[] {

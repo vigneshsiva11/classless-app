@@ -67,7 +67,7 @@ export default function OpenAIRagTutorPage() {
     setRetrievedDocs([]);
 
     try {
-      const response = await fetch("/api/ai/rag-openai", {
+      const response = await fetch("/api/ai/rag-openai-enhanced", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

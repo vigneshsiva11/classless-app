@@ -121,7 +121,7 @@ export default function RagTutorPage() {
     setIsLoading(true);
     setAnswer(null);
     try {
-      const res = await fetch("/api/ai/rag", {
+      const res = await fetch("/api/ai/rag-openai-enhanced", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

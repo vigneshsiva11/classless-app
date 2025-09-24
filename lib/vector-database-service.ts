@@ -21,9 +21,13 @@ export class VectorDatabaseService {
   private openai: OpenAI | null = null;
   private indexName: string;
   private isInitialized = false;
+  // Optional Postgres persistence for syllabus docs
+  private persistSyllabusToPostgres: boolean;
 
   constructor() {
     this.indexName = process.env.PINECONE_INDEX_NAME || "educational-content";
+    this.persistSyllabusToPostgres =
+      (process.env.PERSIST_SYLLABUS_PG || "false").toLowerCase() === "true";
 
     // Initialize OpenAI
     if (process.env.OPENAI_API_KEY) {
@@ -125,21 +129,65 @@ export class VectorDatabaseService {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.openai) {
-      throw new Error("OpenAI not configured");
+    // Try OpenAI first
+    if (this.openai) {
+      try {
+        const response = await this.openai.embeddings.create({
+          model: "text-embedding-3-small",
+          input: text,
+        });
+        return response.data[0].embedding;
+      } catch (error: any) {
+        console.warn(
+          "[Vector DB] OpenAI embedding failed, trying Gemini fallback:",
+          error.message
+        );
+        // Fall through to Gemini fallback
+      }
     }
 
+    // Fallback to Gemini embeddings
     try {
-      const response = await this.openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: text,
-      });
+      const { GoogleGenerativeAI } = await import("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+      const model = genAI.getGenerativeModel({ model: "embedding-001" });
 
-      return response.data[0].embedding;
+      const result = await model.embedContent(text);
+      return result.embedding.values as number[];
     } catch (error) {
-      console.error("[Vector DB] Error generating embedding:", error);
-      throw error;
+      console.warn(
+        "[Vector DB] Both APIs failed, using local fallback embedding:",
+        error
+      );
+      // Local fallback: simple hash-based embedding
+      return this.generateLocalEmbedding(text);
     }
+  }
+
+  private generateLocalEmbedding(text: string): number[] {
+    // Simple hash-based embedding for testing when APIs are unavailable
+    const words = text.toLowerCase().split(/\s+/);
+    const embedding = new Array(1536).fill(0);
+
+    words.forEach((word, i) => {
+      const hash = this.simpleHash(word);
+      const index = hash % 1536;
+      embedding[index] += 1 / (i + 1); // Weight by position
+    });
+
+    // Normalize
+    const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+    return embedding.map((val) => (norm > 0 ? val / norm : 0));
+  }
+
+  private simpleHash(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
   }
 
   async upsertDocuments(documents: DocChunk[]): Promise<void> {
@@ -185,9 +233,63 @@ export class VectorDatabaseService {
       console.log(
         `[Vector DB] Successfully upserted ${documents.length} documents`
       );
+
+      // Optionally persist syllabus entries to Postgres for auditing/search
+      if (this.persistSyllabusToPostgres) {
+        await this.saveSyllabusDocsToPostgres(documentsWithEmbeddings);
+      }
     } catch (error) {
       console.error("[Vector DB] Error upserting documents:", error);
       throw error;
+    }
+  }
+
+  private async saveSyllabusDocsToPostgres(
+    documents: DocChunk[]
+  ): Promise<void> {
+    try {
+      const { pool } = await import("./db-config");
+      if (!pool) return;
+
+      const client = await pool.connect();
+      try {
+        await client.query(
+          `CREATE TABLE IF NOT EXISTS syllabus_docs (
+            id TEXT PRIMARY KEY,
+            subject TEXT,
+            grade INTEGER,
+            chapter TEXT,
+            board TEXT,
+            language TEXT,
+            is_syllabus BOOLEAN,
+            text TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          )`
+        );
+
+        const insertText = `INSERT INTO syllabus_docs (id, subject, grade, chapter, board, language, is_syllabus, text)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          ON CONFLICT (id) DO UPDATE SET subject = EXCLUDED.subject, grade = EXCLUDED.grade, chapter = EXCLUDED.chapter, board = EXCLUDED.board, language = EXCLUDED.language, is_syllabus = EXCLUDED.is_syllabus, text = EXCLUDED.text`;
+
+        for (const doc of documents) {
+          const meta = doc.metadata || {};
+          if (!meta.isSyllabus) continue;
+          await client.query(insertText, [
+            doc.id,
+            meta.subject || null,
+            meta.grade ?? null,
+            meta.chapter || null,
+            meta.board || null,
+            meta.language || null,
+            true,
+            doc.text,
+          ]);
+        }
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.warn("[Vector DB] Skipped Postgres syllabus persistence:", err);
     }
   }
 
@@ -290,9 +392,12 @@ export class VectorDatabaseService {
       const stats = await index.describeIndexStats();
 
       return {
-        totalVectors: stats.totalVectorCount || 0,
-        dimension: stats.dimension || 0,
-        indexFullness: stats.indexFullness || 0,
+        totalVectors:
+          (stats as any).totalVectorCount ||
+          (stats as any).totalRecordCount ||
+          0,
+        dimension: (stats as any).dimension || 0,
+        indexFullness: (stats as any).indexFullness || 0,
       };
     } catch (error) {
       console.error("[Vector DB] Error getting index stats:", error);

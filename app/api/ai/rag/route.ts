@@ -551,6 +551,28 @@ export async function POST(request: NextRequest) {
         const pc = new Pinecone({ apiKey: pcApiKey });
         const index = pc.index(pcIndexName);
 
+        // Infer subject to filter tighter for math questions
+        const qLowerAll = expandedQueries.join(" ").toLowerCase();
+        const mathKeywords = [
+          "polynomial",
+          "algebra",
+          "equation",
+          "fraction",
+          "triangle",
+          "right triangle",
+          "angle",
+          "geometry",
+          "perimeter",
+          "area",
+          "mensuration",
+          "coordinate",
+          "graph",
+          "trigonometry",
+        ];
+        const inferredSubject = mathKeywords.some((k) => qLowerAll.includes(k))
+          ? "mathematics"
+          : undefined;
+
         // Try each expanded query and collect results
         const allResults: any[] = [];
         for (const expandedQuery of expandedQueries) {
@@ -560,7 +582,13 @@ export async function POST(request: NextRequest) {
             vector: qEmbedding,
             topK: 3, // Reduced per query since we're doing multiple
             includeMetadata: true,
-            filter: mappedGrade ? { grade: { $eq: mappedGrade } } : undefined,
+            filter: (() => {
+              const base = mappedGrade ? { grade: { $eq: mappedGrade } } : {};
+              if (inferredSubject) {
+                return { ...base, subject: { $eq: inferredSubject } } as any;
+              }
+              return Object.keys(base).length ? (base as any) : undefined;
+            })(),
           });
           if (res.matches) allResults.push(...res.matches);
         }
@@ -585,6 +613,11 @@ export async function POST(request: NextRequest) {
                 ? parseInt(meta.grade)
                 : meta.grade;
             if (mappedGrade && metaGrade !== mappedGrade) return;
+            if (
+              inferredSubject &&
+              (meta?.subject || "").toLowerCase() !== inferredSubject
+            )
+              return;
             const text = meta.text || meta.content || "";
             if (text) contexts.push(text);
           });
